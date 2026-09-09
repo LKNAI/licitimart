@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# snapshot de dado real do PNCP -- reproduzivel por
+# scripts/exportar_para_webapp.py, nunca versionado (mesma regra de
+# data/** na raiz do projeto). O loader (src/lib/data/dossiesReais.ts)
+# funciona sem este arquivo -- mostra lista real vazia com aviso.
+src/lib/data/contratacoes_pncp.json

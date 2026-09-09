@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { buscarDossie, ROTULO_CONFIABILIDADE, ROTULO_VEREDITO } from "@/lib/mock/dossies";
+import { buscarDossie, ROTULO_CONFIABILIDADE, ROTULO_ORIGEM, ROTULO_VEREDITO } from "@/lib/mock/dossies";
 
 export default async function DossieDetalhePage({
   params,
@@ -8,7 +8,7 @@ export default async function DossieDetalhePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const dossie = buscarDossie(id);
+  const dossie = await buscarDossie(id);
   if (!dossie) notFound();
 
   return (
@@ -30,6 +30,9 @@ export default async function DossieDetalhePage({
         <span className="rounded-full bg-neutral-100 px-3 py-1 font-medium text-neutral-700">
           Publicado em {new Date(dossie.dataPublicacao).toLocaleDateString("pt-BR")}
         </span>
+        <span className="rounded-full bg-neutral-100 px-3 py-1 font-medium text-neutral-700">
+          {ROTULO_ORIGEM[dossie.origem]}
+        </span>
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-4">
@@ -44,6 +47,12 @@ export default async function DossieDetalhePage({
       </div>
 
       <h2 className="mt-8 text-lg font-semibold">Itens</h2>
+      {dossie.itens.length === 0 && (
+        <p className="mt-2 text-sm italic text-neutral-500">
+          Relação de itens ainda não extraída do documento (só o metadado de publicação foi
+          coletado até aqui — ver `src/licitimart/itens/`, ainda não construído).
+        </p>
+      )}
       <table className="mt-3 w-full text-left text-sm">
         <thead className="text-neutral-500">
           <tr>
@@ -71,6 +80,13 @@ export default async function DossieDetalhePage({
         documento de origem. Aqui é só o link mock.
       </p>
       <div className="mt-3 space-y-3">
+        {dossie.achados.length === 0 && (
+          <div className="rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm italic text-neutral-500">
+            Nenhuma análise feita ainda sobre este dossiê — os agentes AG-01 a AG-05 dependem de
+            uma chave de LLM não configurada neste ambiente. Isso é diferente de &quot;sem
+            achado&quot;: é &quot;ainda não avaliado&quot; (RNF-012).
+          </div>
+        )}
         {dossie.achados.map((achado, i) =>
           achado.confianca === "dado_insuficiente" ? (
             <div key={i} className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">

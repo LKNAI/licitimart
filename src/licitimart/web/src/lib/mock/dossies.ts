@@ -4,6 +4,7 @@
 // primeira classe, ERS secao 4.1), RF-019 (Selo de Confiabilidade) e
 // RF-020 (estados nao-conclusivos exibidos explicitamente, nunca
 // escondidos atras de um score bonito).
+import { carregarDossiesReais } from "@/lib/data/dossiesReais";
 
 export type Veredito = "go" | "no_go" | "revisao_humana";
 export type Confiabilidade = "confirmado" | "fonte_unica" | "divergente";
@@ -22,6 +23,8 @@ export interface ItemLicitacao {
   valorUnitarioEstimado: number;
 }
 
+export type Origem = "mock_ilustrativo" | "pncp_real";
+
 export interface Dossie {
   id: string;
   numeroControlePNCP: string;
@@ -34,6 +37,9 @@ export interface Dossie {
   confiabilidade: Confiabilidade;
   itens: ItemLicitacao[];
   achados: Achado[];
+  // Nunca misturar mock e dado real silenciosamente -- toda tela que lista
+  // dossiês precisa exibir esse rótulo de forma visível.
+  origem: Origem;
 }
 
 export const DOSSIES_MOCK: Dossie[] = [
@@ -45,6 +51,7 @@ export const DOSSIES_MOCK: Dossie[] = [
     modalidade: "Pregão — Eletrônico",
     valorEstimado: 1_240_000,
     dataPublicacao: "2026-08-14",
+    origem: "mock_ilustrativo",
     veredito: "go",
     confiabilidade: "confirmado",
     itens: [
@@ -69,6 +76,7 @@ export const DOSSIES_MOCK: Dossie[] = [
     modalidade: "Concorrência — Eletrônica",
     valorEstimado: 860_000,
     dataPublicacao: "2026-08-20",
+    origem: "mock_ilustrativo",
     veredito: "revisao_humana",
     confiabilidade: "fonte_unica",
     itens: [
@@ -99,6 +107,7 @@ export const DOSSIES_MOCK: Dossie[] = [
     modalidade: "Pregão — Eletrônico",
     valorEstimado: 430_000,
     dataPublicacao: "2026-08-22",
+    origem: "mock_ilustrativo",
     veredito: "no_go",
     confiabilidade: "divergente",
     itens: [
@@ -116,8 +125,19 @@ export const DOSSIES_MOCK: Dossie[] = [
   },
 ];
 
-export function buscarDossie(id: string): Dossie | undefined {
-  return DOSSIES_MOCK.find((d) => d.id === id);
+// Combinar dado real (PNCP, quando o snapshot existir) com o mock
+// ilustrativo -- nunca silenciosamente, sempre com `origem` visível em
+// cada item (ver Dossie.origem). Assíncrono porque o snapshot real é lido
+// de disco em runtime (ver dossiesReais.ts) -- não existe import estático
+// de dado que pode não ter sido gerado ainda.
+export async function listarTodosDossies(): Promise<Dossie[]> {
+  const { dossies } = await carregarDossiesReais();
+  return [...dossies, ...DOSSIES_MOCK];
+}
+
+export async function buscarDossie(id: string): Promise<Dossie | undefined> {
+  const todos = await listarTodosDossies();
+  return todos.find((d) => d.id === id);
 }
 
 export const ROTULO_VEREDITO: Record<Veredito, string> = {
@@ -130,4 +150,9 @@ export const ROTULO_CONFIABILIDADE: Record<Confiabilidade, string> = {
   confirmado: "Confirmado (fontes concordam)",
   fonte_unica: "Fonte única",
   divergente: "Divergente entre fontes",
+};
+
+export const ROTULO_ORIGEM: Record<Origem, string> = {
+  mock_ilustrativo: "Ilustrativo (mock)",
+  pncp_real: "PNCP real",
 };

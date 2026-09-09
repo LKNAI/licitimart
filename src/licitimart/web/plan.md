@@ -31,3 +31,20 @@ O `web/` está vazio desde o início do projeto, deliberadamente — a decisão 
 - `npm run build` passa sem erro.
 - `npm run dev` sobe e as 4 rotas respondem (verificado depois, com Playwright ou navegador real — não só `curl`, porque é JS renderizado).
 - Nenhuma tela afirma "dado real" quando é mock.
+
+## Concluído (09/09/2026)
+
+Esqueleto entregue e verificado em navegador real (Playwright, sem erro de console em nenhuma rota). Screenshots conferidos manualmente.
+
+## Fase A — ponte de dado real (09/09/2026, mesmo dia)
+
+Depois do esqueleto, conectamos o coletor de produção (`src/licitimart/ingestao/pncp.py`) ao webapp sem esperar Supabase:
+
+- `scripts/exportar_para_webapp.py` roda o coletor real (orçamento curto, 90s) e exporta `src/licitimart/web/src/lib/data/contratacoes_pncp.json` — 913 contratações reais do PNCP em uma execução.
+- `src/lib/data/dossiesReais.ts` carrega esse snapshot e mapeia para o tipo `Dossie`, **sempre** com `veredito: "revisao_humana"` e `confiabilidade: "fonte_unica"` — nunca inventando score sobre dado não analisado (RNF-012).
+- `Dossie.origem` (`"pncp_real"` | `"mock_ilustrativo"`) garante que dado real e mock ilustrativo nunca se misturam silenciosamente — toda tela mostra o rótulo.
+- `/dossies` ganhou paginação (916 itens não cabem numa tela só) e mostra a procedência do snapshot (quando coletado, quantos itens, qual janela).
+- Bug pego no caminho: `numeroControlePNCP` contém "/" (ex. `...-000967/2026`) — usar isso cru como `id` de rota quebra `/dossies/[id]` (interpretado como dois segmentos). Corrigido sanitizando o id antes de virar `Dossie.id`.
+- Verificado em navegador real: lista com 916 dossiês, paginação funcionando, detalhe de item real renderizando corretamente com "Itens ainda não extraídos" e "Nenhuma análise feita ainda" em vez de campos vazios sem explicação.
+
+**Próximo passo desta fase, quando fizer sentido:** rodar o export com escopo maior (mais dias, mais modalidades) e decidir a cadência (script agendado vs. sob demanda) — hoje é execução manual.
