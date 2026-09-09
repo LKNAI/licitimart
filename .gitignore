@@ -1,0 +1,21 @@
+# dados coletados e cache — reprodutíveis pelo código, não versionados
+data/**
+!data/**/*.manifesto.json
+
+# saída de execução dos spikes — mantém só os resultados resumidos versionados manualmente
+spikes/**/resultados/*.jsonl
+spikes/**/resultados/raw_*
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# node (quando o front entrar)
+node_modules/
+.next/
+
+# editores/SO
+.DS_Store
+Thumbs.db
