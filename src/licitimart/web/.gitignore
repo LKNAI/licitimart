@@ -46,3 +46,7 @@ next-env.d.ts
 # data/** na raiz do projeto). O loader (src/lib/data/dossiesReais.ts)
 # funciona sem este arquivo -- mostra lista real vazia com aviso.
 src/lib/data/contratacoes_pncp.json
+
+# exemplos de minuta gerados por scripts/exportar_minutas_exemplo.py --
+# mesma regra: reproduzivel pelo script, nao versionado.
+src/lib/data/minutas_exemplo.json

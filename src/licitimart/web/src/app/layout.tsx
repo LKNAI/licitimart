@@ -37,6 +37,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/pipeline" className="hover:text-neutral-900">
                 Pipeline
               </Link>
+              <Link href="/impugnacoes" className="hover:text-neutral-900">
+                Impugnações
+              </Link>
+              <Link href="/retificacoes" className="hover:text-neutral-900">
+                Retificações
+              </Link>
+              <Link href="/metricas" className="hover:text-neutral-900">
+                Métricas
+              </Link>
+              <Link href="/tenant" className="hover:text-neutral-900">
+                Tenant
+              </Link>
             </nav>
             <span className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
               esqueleto v1 — dado mock, sem Supabase real

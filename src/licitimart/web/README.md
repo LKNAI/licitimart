@@ -26,8 +26,9 @@ Reescreve `src/lib/data/contratacoes_pncp.json`. Respeita o throttle de descober
 
 ## O que falta (não é bug, é próximo passo)
 
-- Projeto Supabase real (`.env.local` vazio hoje).
+- Projeto Supabase real (`.env.local` vazio hoje) — bloqueia persistência de verdade em `/tenant` e autenticação.
 - Autenticação (RNF-007 RBAC) — nenhuma tela pede login ainda.
 - ~~Conectar `/dossies` ao dado real de `src/licitimart/ingestao/`~~ — feito (Fase A, `scripts/exportar_para_webapp.py`). Falta automatizar a cadência (hoje é manual) e ampliar o escopo coletado.
 - Navegação "abrir na página exata" (RNF-010) — hoje é um botão mock; depende do spike 02 ter uma citação validada por LLM real para apontar.
-- Impugnação Assistida (RF-017) na UI — depende do spike 03 avançar (ver `spikes/03_impugnacao_assistida/`).
+- ~~Impugnação Assistida (RF-017) na UI~~ — feito como exemplo real (`/impugnacoes`, Fase B, `scripts/exportar_minutas_exemplo.py`). Falta aplicar sobre edital real (depende de extração de texto + análise, ainda não construídas).
+- Diff de Retificação (RF-018) sobre dado real — hoje `/retificacoes` é só exemplo estático; precisa do coletor rastrear duas versões da mesma contratação ao longo do tempo (trabalho de v2 do spike 01).
