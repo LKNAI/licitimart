@@ -69,8 +69,10 @@ export default async function TenantPage() {
       <ItemCatalogoForm tenantId={tenantId} />
 
       <div className="mt-8 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-500">
-        <strong>Atestados de capacidade técnica (upload):</strong> ainda não disponível — exige
-        Supabase Storage, que não foi decidido/configurado ainda para este projeto.
+        <strong>Atestados de capacidade técnica (upload):</strong> ainda não disponível nesta tela —
+        o Supabase Storage já existe no projeto (bucket <code>editais-documentos</code>, Fase K),
+        mas reservado a documento de edital coletado pelo backend; um bucket separado para upload de
+        atestado do próprio tenant ainda não foi criado.
       </div>
     </div>
   );
