@@ -7,6 +7,7 @@ ausencia da variavel de ambiente.
 import hashlib
 import json
 import os
+from datetime import datetime
 
 from supabase import Client, create_client
 
@@ -27,10 +28,71 @@ def criar_cliente() -> Client:
     return create_client(url, chave)
 
 
+# Campos que participam da deteccao de retificacao (RF-018) -- so os que
+# de fato vem da API do PNCP e podem mudar entre duas coletas do mesmo
+# edital. Precisa bater com o check constraint de retificacoes.campo.
+_CAMPOS_COMPARAVEIS = ("orgao", "municipio_uf", "objeto", "modalidade", "valor_estimado", "data_publicacao")
+
+
+def _normalizar_para_comparacao(campo: str, valor):
+    """O Postgres devolve valor_estimado como float/Decimal e
+    data_publicacao com timezone explicito (+00:00), mesmo quando o PNCP
+    manda o numero "cru" e a data sem timezone -- comparar as strings
+    brutas gera falso-positivo de retificacao (mesmo valor, representacao
+    diferente). Normaliza para o tipo comparavel antes do == ."""
+    if valor is None:
+        return None
+    if campo == "valor_estimado":
+        try:
+            return float(valor)
+        except (TypeError, ValueError):
+            return valor
+    if campo == "data_publicacao":
+        try:
+            dt = datetime.fromisoformat(str(valor).replace("Z", "+00:00"))
+        except ValueError:
+            return valor
+        # Comparar sempre "naive" -- o PNCP manda sem timezone e o
+        # Postgres devolve com +00:00; == entre aware e naive nunca da
+        # True (nao lanca erro, so nunca bate), o que gerava
+        # falso-positivo de retificacao para o mesmo instante.
+        return dt.replace(tzinfo=None) if dt.tzinfo else dt
+    return valor
+
+
+def _detectar_retificacoes(linhas_novas: list[dict], linhas_antigas_por_numero: dict[str, dict]) -> list[dict]:
+    """Compara cada linha nova contra o estado atual (antes do upsert
+    sobrescrever) e retorna uma linha de retificacoes por campo que
+    mudou. Primeira coleta de um numero_controle_pncp (sem linha antiga)
+    nunca gera retificacao -- e publicacao, nao alteracao."""
+    retificacoes = []
+    for nova in linhas_novas:
+        antiga = linhas_antigas_por_numero.get(nova["numero_controle_pncp"])
+        if not antiga:
+            continue
+        for campo in _CAMPOS_COMPARAVEIS:
+            valor_antigo = antiga.get(campo)
+            valor_novo = nova.get(campo)
+            if _normalizar_para_comparacao(campo, valor_antigo) == _normalizar_para_comparacao(campo, valor_novo):
+                continue
+            retificacoes.append({
+                "contratacao_id": antiga["id"],
+                "numero_controle_pncp": nova["numero_controle_pncp"],
+                "campo": campo,
+                "valor_anterior": str(valor_antigo) if valor_antigo is not None else None,
+                "valor_novo": str(valor_novo) if valor_novo is not None else None,
+            })
+    return retificacoes
+
+
 def upsert_contratacoes(cliente: Client, itens_pncp: list[dict]) -> int:
     """Recebe itens crus da API do PNCP (mesmo formato de pncp.py) e faz
     upsert por numero_controle_pncp (chave unica do schema) -- rodar o
-    coletor de novo sobre o mesmo dia nunca duplica linha."""
+    coletor de novo sobre o mesmo dia nunca duplica linha.
+
+    Antes de sobrescrever, busca o estado atual de cada numero_controle_pncp
+    do lote e compara campo a campo (RF-018) -- e a unica janela em que o
+    "antes" ainda existe; depois do upsert, so o "depois" sobrevive."""
     linhas = []
     for item in itens_pncp:
         numero = item.get("numeroControlePNCP")
@@ -51,6 +113,20 @@ def upsert_contratacoes(cliente: Client, itens_pncp: list[dict]) -> int:
         })
     if not linhas:
         return 0
+
+    numeros = [l["numero_controle_pncp"] for l in linhas]
+    resposta_antigas = (
+        cliente.table("contratacoes")
+        .select("id,numero_controle_pncp,orgao,municipio_uf,objeto,modalidade,valor_estimado,data_publicacao")
+        .in_("numero_controle_pncp", numeros)
+        .execute()
+    )
+    antigas_por_numero = {r["numero_controle_pncp"]: r for r in resposta_antigas.data}
+
+    retificacoes = _detectar_retificacoes(linhas, antigas_por_numero)
+    if retificacoes:
+        cliente.table("retificacoes").insert(retificacoes).execute()
+
     cliente.table("contratacoes").upsert(linhas, on_conflict="numero_controle_pncp").execute()
     return len(linhas)
 
