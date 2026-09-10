@@ -21,9 +21,17 @@ export default async function DossieDetalhePage({
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
-      <Link href="/dossies" className="text-sm text-neutral-500 hover:text-neutral-900">
-        ← Dossiês
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/dossies" className="text-sm text-neutral-500 hover:text-neutral-900">
+          ← Dossiês
+        </Link>
+        <a
+          href={`/dossies/${dossie.id}/exportar`}
+          className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+        >
+          Exportar dossiê (.docx)
+        </a>
+      </div>
 
       <h1 className="mt-2 text-2xl font-semibold tracking-tight">{dossie.objeto}</h1>
       <p className="text-neutral-600">{dossie.orgao}</p>
