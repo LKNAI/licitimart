@@ -93,9 +93,17 @@ export default async function DossieDetalhePage({
                     </div>
                   </div>
                   {doc.statusExtracao === "extraido_nativo" && (
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
-                      Texto extraído
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/dossies/${dossie.id}/documento/${doc.id}`}
+                        className="rounded-md border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-100"
+                      >
+                        Buscar no texto
+                      </Link>
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
+                        Texto extraído
+                      </span>
+                    </div>
                   )}
                   {doc.statusExtracao === "requer_ocr" && (
                     <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">

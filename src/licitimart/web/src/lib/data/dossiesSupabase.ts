@@ -84,6 +84,7 @@ export async function carregarDossiesSupabase(): Promise<{ dossies: Dossie[]; me
 }
 
 export interface DocumentoContratacao {
+  id: number;
   titulo: string | null;
   tipoDocumento: string | null;
   statusExtracao: "extraido_nativo" | "requer_ocr" | "erro";
@@ -95,9 +96,10 @@ export async function buscarDocumentosContratacao(contratacaoIdReal: number): Pr
   const supabase = await criarClienteSupabaseServer();
   const { data } = await supabase
     .from("documentos_contratacao")
-    .select("titulo, tipo_documento, status_extracao, paginas")
+    .select("id, titulo, tipo_documento, status_extracao, paginas")
     .eq("contratacao_id", contratacaoIdReal);
   return (data ?? []).map((row) => ({
+    id: row.id,
     titulo: row.titulo,
     tipoDocumento: row.tipo_documento,
     statusExtracao: row.status_extracao as DocumentoContratacao["statusExtracao"],

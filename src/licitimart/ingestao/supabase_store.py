@@ -163,6 +163,7 @@ def salvar_documento(
     texto_extraido: str,
     status_extracao: str,
     paginas: int,
+    paginas_offsets: list[int] | None = None,
 ) -> None:
     """Upload no Storage + upsert em documentos_contratacao. Path
     prefixado por numero_controle_pncp -- legivel, sem colisao entre
@@ -180,6 +181,7 @@ def salvar_documento(
         "texto_extraido": texto_extraido or None,
         "status_extracao": status_extracao,
         "paginas": paginas or None,
+        "paginas_offsets": paginas_offsets or None,
     }, on_conflict="contratacao_id,sequencial_documento").execute()
 
 

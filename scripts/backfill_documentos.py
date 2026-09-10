@@ -71,10 +71,10 @@ def main():
                 logger.warning("[%d/%d] %s -- falhou baixar edital", i, len(alvo), c["numero_controle_pncp"])
                 continue
 
-            texto, status, paginas = extracao.extrair_texto(conteudo, alvo_arquivo["titulo"])
+            texto, status, paginas, offsets = extracao.extrair_texto(conteudo, alvo_arquivo["titulo"])
             store.salvar_documento(
                 cliente, c["id"], c["numero_controle_pncp"], alvo_arquivo["sequencialDocumento"],
-                alvo_arquivo["titulo"], alvo_arquivo.get("tipoDocumentoNome"), conteudo, texto, status, paginas,
+                alvo_arquivo["titulo"], alvo_arquivo.get("tipoDocumentoNome"), conteudo, texto, status, paginas, offsets,
             )
             processadas += 1
             logger.info("[%d/%d] %s -- status=%s paginas=%s chars=%d",
