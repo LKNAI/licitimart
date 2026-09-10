@@ -18,13 +18,18 @@ Este ambiente **não tem `ANTHROPIC_API_KEY` nem `OPENAI_API_KEY` configurada**.
 | Validador aceita as citações idênticas/com espaçamento diferente e rejeita as parafraseadas/alteradas | **Aprovado** — o mecanismo de verificação é confiável; falta só a etapa 2 (LLM real) para completar a validação do pipeline inteiro. |
 | Validador aceita citação com número alterado como válida | **Reprovado crítico** — é exatamente o tipo de alucinação sutil que RNF-010 existe para prevenir; a normalização de texto do validador precisa ser mais estrita, não mais permissiva. |
 
+## Rodada 2 (10/09/2026) — `ClienteLLMReal` implementado, ainda não testado
+
+Sem crédito em nenhuma API de LLM neste ambiente — mas por decisão explícita do usuário, a implementação real avançou mesmo assim, em vez de esperar a chave: `ClienteLLMReal` (em `pipeline.py`) usa LiteLLM de verdade, com Structured Outputs (`response_format json_object`) na etapa de localizar citação. Isso é **código real, revisado e sintaticamente correto, instanciável** (`ClienteLLMReal()` importa e constrói sem erro) — mas **nenhuma chamada de rede foi feita**, porque não há `ANTHROPIC_API_KEY`/`OPENAI_API_KEY` configurada aqui. `pipeline.py --real` falha cedo com um erro claro nesse caso, em vez de fingir sucesso.
+
 ## Próximo passo depois deste spike
 
-Configurar `ANTHROPIC_API_KEY` (ou `OPENAI_API_KEY`) neste ambiente e rodar `pipeline.py --real` contra 3–5 editais reais para medir a taxa de citação válida na primeira tentativa — essa taxa é o dado que faltava para a parte 2.
+Configurar `ANTHROPIC_API_KEY` (ou `OPENAI_API_KEY`) neste ambiente e rodar `pipeline.py --real` contra 3–5 editais reais para medir a taxa de citação válida na primeira tentativa — essa taxa é o dado que faltava para a parte 2, e é a única coisa que a rodada 2 não conseguiu resolver (falta de crédito, não falta de código).
 
 ## Como rodar
 
 ```
 python validador.py          # roda os casos de teste adversariais, sem rede, sem custo
 python pipeline.py           # roda o fluxo de ponta a ponta em modo simulado
+python pipeline.py --real    # roda contra LLM real (LiteLLM) -- exige ANTHROPIC_API_KEY ou OPENAI_API_KEY
 ```
