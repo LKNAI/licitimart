@@ -55,20 +55,35 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <header className="border-b border-line bg-surface">
           <div className="mx-auto max-w-6xl px-6 py-3.5">
             <div className="flex items-center justify-between gap-4">
-              <Link href="/" className="font-display text-[19px] font-semibold tracking-tight text-ink">
+              <Link href="/" className="font-display text-[23px] font-semibold tracking-tight text-ink">
                 Licitimart
               </Link>
-              {user && (
+              {user ? (
                 <form action={sair} className="flex items-center gap-3">
                   <span className="hidden font-mono text-xs text-ink-faint sm:inline">{user.email}</span>
-                  <button type="submit" className="text-[13px] text-ink-soft hover:text-ink">
+                  <button type="submit" className="text-[13px] text-ink-soft transition-colors hover:text-ink">
                     Sair
                   </button>
                 </form>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/login"
+                    className="rounded-[4px] px-3 py-1.5 text-[13.5px] font-medium text-ink-soft transition-colors hover:text-ink"
+                  >
+                    Entrar
+                  </Link>
+                  <Link
+                    href="/login?cadastro=1"
+                    className="rounded-[4px] bg-ink px-3.5 py-1.5 text-[13.5px] font-medium text-paper transition-colors hover:bg-seal-green"
+                  >
+                    Criar conta
+                  </Link>
+                </div>
               )}
             </div>
             {user && (
-              <div className="-mx-6 mt-2 overflow-x-auto px-6">
+              <div className="-mx-6 mt-2 overflow-x-auto px-6 sm:overflow-visible">
                 <NavBar rotas={ROTAS} />
               </div>
             )}

@@ -29,6 +29,18 @@
   --color-seal-red-bg: #f3e2de;
   --color-seal-blue: #2b5b73;
   --color-seal-blue-bg: #e1ebee;
+
+  /* Motion: um ritmo só, reaproveitado em todo componente interativo —
+     rápido o bastante pra não atrasar o clique, devagar o bastante pra
+     não parecer instantâneo/sem resposta. */
+  --ease-padrao: cubic-bezier(0.4, 0, 0.2, 1);
+  --duracao-rapida: 120ms;
+  --duracao-padrao: 180ms;
+
+  /* Elevação: reservada para o que está literalmente "por cima" de algo
+     (menu mobile, popover) — não decoração de card, que este produto
+     deliberadamente não usa (ver Selo.tsx). */
+  --sombra-flutuante: 0 8px 24px -8px rgba(23, 33, 29, 0.28), 0 2px 6px -2px rgba(23, 33, 29, 0.16);
 }
 
 @theme inline {
@@ -68,6 +80,91 @@ textarea:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--color-seal-blue);
   outline-offset: 2px;
+  transition: outline-offset var(--duracao-rapida) var(--ease-padrao);
+}
+
+/* Todo elemento interativo responde ao toque/clique com o mesmo ritmo —
+   não é opcional por componente, é a base de "o produto reage a você". */
+a,
+button,
+[role="button"],
+input,
+select,
+textarea,
+summary {
+  transition-timing-function: var(--ease-padrao);
+  transition-duration: var(--duracao-padrao);
+}
+
+button:not(:disabled),
+a,
+[role="button"]:not([aria-disabled="true"]),
+summary {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.98);
+  transition-duration: var(--duracao-rapida);
+}
+
+/* Spinner mínimo — mesmo anel, reaproveitado em qualquer ação assíncrona
+   (definir veredito, enriquecer dossiê, buscar, etc.). */
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: girar 0.6s linear infinite;
+}
+
+/* Placeholder de carregamento — um retângulo "papel mais escuro", pulsando
+   devagar, nunca o shimmer brilhante de kit SaaS genérico. */
+@keyframes pulsar {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.skeleton {
+  background: var(--color-line);
+  border-radius: 3px;
+  animation: pulsar 1.4s var(--ease-padrao) infinite;
+}
+
+/* Entrada do cartão de autenticação (/login) -- o mesmo ritmo padrão do
+   produto, só que "both" para não piscar no frame inicial antes do JS. */
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.cartao-flutuante {
+  animation: aparecer 220ms var(--ease-padrao) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -77,5 +174,10 @@ summary:focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:not([aria-disabled="true"]):active {
+    transform: none;
   }
 }

@@ -34,7 +34,17 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const rotaPublica = ROTAS_PUBLICAS.some((r) => path.startsWith(r));
+  // "/" e a landing page publica -- caso a parte, nunca por startsWith("/"),
+  // senao TODA rota vira publica (qualquer path comeca com "/").
+  const rotaPublica = path === "/" || ROTAS_PUBLICAS.some((r) => path.startsWith(r));
+
+  // Logado acessando a landing page: manda direto para o app, em vez de
+  // mostrar a pagina de marketing para quem ja tem conta.
+  if (user && path === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dossies";
+    return NextResponse.redirect(url);
+  }
 
   if (!user && !rotaPublica) {
     const url = request.nextUrl.clone();
