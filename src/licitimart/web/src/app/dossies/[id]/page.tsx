@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buscarDossie, ROTULO_CONFIABILIDADE, ROTULO_ORIGEM, ROTULO_VEREDITO } from "@/lib/mock/dossies";
+import VeredictoBotoes from "./VeredictoBotoes";
 
 export default async function DossieDetalhePage({
   params,
@@ -38,7 +39,16 @@ export default async function DossieDetalhePage({
       <div className="mt-6 grid grid-cols-2 gap-4">
         <div className="rounded-lg border border-neutral-200 bg-white p-4">
           <div className="text-xs text-neutral-500">Veredito</div>
-          <div className="mt-1 text-lg font-semibold">{ROTULO_VEREDITO[dossie.veredito]}</div>
+          {dossie.origem === "pncp_real" ? (
+            <div className="mt-2">
+              <VeredictoBotoes
+                contratacaoId={Number(dossie.id.replace("real-", ""))}
+                vereditoAtual={dossie.veredito}
+              />
+            </div>
+          ) : (
+            <div className="mt-1 text-lg font-semibold">{ROTULO_VEREDITO[dossie.veredito]}</div>
+          )}
         </div>
         <div className="rounded-lg border border-neutral-200 bg-white p-4">
           <div className="text-xs text-neutral-500">Selo de Confiabilidade</div>

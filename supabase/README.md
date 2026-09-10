@@ -1,24 +1,29 @@
 # Schema Licitimart (Fase C)
 
-Sem projeto Supabase real conectado ainda (decisão pendente do usuário — ver `CLAUDE.md`). Este diretório existe para que, no dia em que o projeto existir, aplicar o schema seja `supabase link` + `supabase db push`, não um trabalho de design começando do zero.
+Projeto Supabase real conectado desde a Fase C (`okirbyqkjrwroyrivysw`, região `sa-east-1`). Este diretório versiona o schema aplicado.
 
 ## O que tem aqui
 
 - `config.toml` — gerado por `supabase init`.
-- `migrations/20260909222844_schema_inicial.sql` — todas as tabelas, índices e RLS da v1. Ver `plan.md` para a decisão de modelagem (contratação é pública/compartilhada; análise é por tenant).
+- `migrations/` — todas as migrations da v1, em ordem. Ver `plan.md` para a decisão de modelagem original (contratação é pública/compartilhada; análise é por tenant).
 
-## Validação feita sem projeto real
+## Validação antes de aplicar
 
-Não há como testar contra um Postgres de verdade neste ambiente (sem Docker, sem projeto Supabase). A migration foi validada com `pglast` (bindings Python da gramática real do Postgres) — 60 statements, sintaxe confirmada. **Isso prova sintaxe, não comportamento** — RLS, índices e constraints só se provam de verdade no primeiro `supabase db push` contra um projeto real.
+Toda migration nova é validada sintaticamente com `pglast` (bindings Python da gramática real do Postgres) antes de ir para o banco — **isso prova sintaxe, não comportamento**; RLS, índices e constraints só se provam de verdade rodando contra o projeto real (ver seção de teste de cada fase em `src/licitimart/web/plan_fase_*.md`).
 
-## Quando houver projeto Supabase real
+## Como aplicar migration nova (10/09/2026 em diante)
+
+Até a Fase F, cada migration exigia que o usuário colasse manualmente no SQL Editor (única forma disponível — sem `SUPABASE_ACCESS_TOKEN`/login do CLI configurado). A partir de 10/09/2026, com `supabase login` feito uma vez pelo usuário (token fica no keychain local, nunca visto/guardado por mim) e o projeto linkado (`supabase link --project-ref okirbyqkjrwroyrivysw`), aplicar migration nova é:
 
 ```bash
-supabase link --project-ref <ref-do-projeto>
-supabase db push
+npx supabase db push
 ```
 
-Depois disso, o coletor Python (`src/licitimart/ingestao/`) passa a escrever em `contratacoes`/`itens_licitacao`/`manifestos_ingestao`/`pendencias_ingestao` usando a service role key (que ignora RLS), e o webapp passa a ler via `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` (`.env.local`, ver `src/licitimart/web/.env.example`) em vez dos JSONs de ponte (`scripts/exportar_*.py`) — as duas coisas coexistem até essa migração acontecer, não precisam ser trocadas no mesmo dia.
+Atenção: a mesma organização Supabase tem **outro projeto não relacionado** (`caqqfimkcxsjmvoyfnmf`, "P1 - MedContent (BR)") — sempre confirmar que o projeto linkado é `okirbyqkjrwroyrivysw` antes de rodar `db push` (`supabase migration list` mostra o link ativo).
+
+As três primeiras migrations (Fases C/D/E) foram coladas manualmente antes desse fluxo existir — reconciliadas no histórico do CLI via `supabase migration repair --status applied <versões>` (marca como aplicada sem reexecutar), sem duplicar nem quebrar nada.
+
+O coletor Python (`src/licitimart/ingestao/`) escreve em `contratacoes`/`itens_licitacao`/`manifestos_ingestao`/`pendencias_ingestao` usando a service role key (que ignora RLS), e o webapp lê via `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY` (`.env.local`).
 
 ## Nunca commitar
 

@@ -20,10 +20,10 @@ export default async function PipelinePage() {
       <h1 className="text-2xl font-semibold tracking-tight">Pipeline Go / No-Go</h1>
       <p className="mt-1 text-sm text-neutral-500">
         RF-007 — &quot;Revisão Humana&quot; é resultado esperado e frequente, não uma saída
-        residual — por isso fica no meio, do mesmo tamanho das outras duas. Hoje quase tudo cai
-        em Revisão Humana porque os dossiês reais do PNCP ainda não passaram pelos agentes
-        AG-01 a AG-05 (sem chave de LLM configurada) — não é um problema do pipeline, é o
-        estado real do dado.
+        residual — por isso fica no meio, do mesmo tamanho das outras duas. Hoje o veredito de
+        dossiês reais só muda por decisão humana (abra o dossiê e marque Go/No-Go/Revisão
+        Humana) — os agentes AG-01 a AG-05 que classificariam automaticamente dependem de uma
+        chave de LLM não configurada neste ambiente.
       </p>
 
       <div className="mt-6 grid grid-cols-3 gap-4">

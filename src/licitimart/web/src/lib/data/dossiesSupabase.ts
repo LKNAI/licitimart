@@ -22,6 +22,32 @@ export async function carregarDossiesSupabase(): Promise<{ dossies: Dossie[]; me
     return { dossies: [], metadado: { disponivel: false, total: 0 } };
   }
 
+  // Veredito e por tenant, nunca global (Fase G) -- a mesma contratacao
+  // pode ser "Go" para um tenant e "No-Go" para outro. So buscamos as
+  // analises do tenant do usuario logado; quem nao tem analise ainda
+  // cai no default "revisao_humana" (mesmo default da coluna no banco).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const veredictosPorContratacao = new Map<number, Dossie["veredito"]>();
+  if (user) {
+    const { data: membresia } = await supabase
+      .from("tenant_membros")
+      .select("tenant_id")
+      .eq("user_id", user.id)
+      .limit(1)
+      .single();
+    if (membresia) {
+      const { data: analises } = await supabase
+        .from("analises")
+        .select("contratacao_id, veredito")
+        .eq("tenant_id", membresia.tenant_id);
+      for (const a of analises ?? []) {
+        veredictosPorContratacao.set(a.contratacao_id, a.veredito as Dossie["veredito"]);
+      }
+    }
+  }
+
   const dossies: Dossie[] = data.map((row) => ({
     id: `real-${row.id}`,
     numeroControlePNCP: row.numero_controle_pncp,
@@ -30,7 +56,7 @@ export async function carregarDossiesSupabase(): Promise<{ dossies: Dossie[]; me
     modalidade: row.modalidade ?? "(modalidade não informada)",
     valorEstimado: row.valor_estimado ?? 0,
     dataPublicacao: row.data_publicacao ?? new Date().toISOString(),
-    veredito: "revisao_humana",
+    veredito: veredictosPorContratacao.get(row.id) ?? "revisao_humana",
     confiabilidade: (row.confiabilidade as Dossie["confiabilidade"]) ?? "fonte_unica",
     itens: [],
     achados: [],
