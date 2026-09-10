@@ -31,11 +31,14 @@ export default function ConvidarForm({ tenantId }: { tenantId: number }) {
       <button
         type="submit"
         disabled={pendente}
-        className="rounded-[4px] bg-ink px-4 py-2.5 text-[14px] font-medium text-paper hover:bg-seal-green disabled:opacity-50"
+        className="flex items-center gap-2 rounded-[4px] bg-ink px-4 py-2.5 text-[14px] font-medium text-paper transition-colors hover:bg-seal-green disabled:pointer-events-none disabled:opacity-50"
       >
+        {pendente && <span className="spinner" aria-hidden />}
         {pendente ? "Convidando…" : "Convidar"}
       </button>
-      {estado.erro && <p className="w-full text-[13px] text-seal-red">{estado.erro}</p>}
+      <p role="status" aria-live="polite" className="w-full text-[13px] text-seal-red">
+        {estado.erro}
+      </p>
     </form>
   );
 }

@@ -26,8 +26,11 @@ export default function RedefinirSenhaPage() {
           placeholder="nova senha (mín. 6 caracteres)"
           className={campoClasse}
         />
-        {estado.erro && <p className="text-[13px] text-seal-red">{estado.erro}</p>}
-        <button type="submit" disabled={pendente} className={botaoPrimarioClasse}>
+        <p role="status" aria-live="polite" className="text-[13px] text-seal-red">
+          {estado.erro}
+        </p>
+        <button type="submit" disabled={pendente} className={`flex items-center justify-center gap-2 ${botaoPrimarioClasse}`}>
+          {pendente && <span className="spinner" aria-hidden />}
           {pendente ? "Salvando…" : "Salvar nova senha"}
         </button>
       </form>

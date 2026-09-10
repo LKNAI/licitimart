@@ -60,7 +60,7 @@ export default async function RetificacoesPage() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Link
                   href={r.contratacoes ? `/dossies/real-${r.contratacoes.id}` : "/dossies"}
-                  className="text-[14px] font-medium text-ink hover:text-seal-green"
+                  className="text-[14px] font-medium text-ink transition-colors hover:text-seal-green"
                 >
                   {r.contratacoes?.objeto ?? "(contratação removida)"}
                 </Link>

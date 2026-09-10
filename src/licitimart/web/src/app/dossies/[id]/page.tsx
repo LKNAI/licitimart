@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buscarDossie, ROTULO_CONFIABILIDADE, ROTULO_ORIGEM, ROTULO_VEREDITO } from "@/lib/mock/dossies";
-import { buscarItensComparaveis, buscarDocumentosContratacao } from "@/lib/data/dossiesSupabase";
-import { calcularFaixaPreco } from "@/lib/precificacao";
+import { buscarItensComparaveisSemanticos, buscarDocumentosContratacao } from "@/lib/data/dossiesSupabase";
+import { calcularFaixaPrecoSemantica } from "@/lib/precificacao";
+import { embutirTexto, formatarParaPgvector } from "@/lib/embedding";
 import { SeloCarimbo, SeloCompacto, type Tom } from "@/components/Selo";
 import VeredictoBotoes from "./VeredictoBotoes";
+import EnriquecerBotao from "./EnriquecerBotao";
+import DetectarRestritividadeBotao from "./DetectarRestritividadeBotao";
 
 const TOM_CONFIABILIDADE: Record<string, Tom> = {
   confirmado: "green",
@@ -25,7 +28,16 @@ export default async function DossieDetalhePage({
   const dossie = await buscarDossie(id);
   if (!dossie) notFound();
 
-  const itensComparaveis = await buscarItensComparaveis(dossie.itens.map((i) => i.descricao));
+  // Fase P: faixa de preço por similaridade semântica de descrição
+  // (embedding por item, calculado em tempo real), não mais string
+  // idêntica -- ver plan_fase_p.md.
+  const faixasPorItem = await Promise.all(
+    dossie.itens.map(async (item) => {
+      const vetor = await embutirTexto(item.descricao);
+      const comparaveis = await buscarItensComparaveisSemanticos(formatarParaPgvector(vetor), item.id);
+      return calcularFaixaPrecoSemantica(comparaveis);
+    })
+  );
   const documentos = dossie.origem === "pncp_real"
     ? await buscarDocumentosContratacao(Number(dossie.id.replace("real-", "")))
     : [];
@@ -33,12 +45,12 @@ export default async function DossieDetalhePage({
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
       <div className="flex items-center justify-between">
-        <Link href="/dossies" className="text-[13px] text-ink-soft hover:text-ink">
+        <Link href="/dossies" className="text-[13px] text-ink-soft transition-colors hover:text-ink">
           ← Dossiês
         </Link>
         <a
           href={`/dossies/${dossie.id}/exportar`}
-          className="rounded-[4px] border border-line-strong px-3 py-1.5 text-[13px] font-medium text-ink hover:bg-surface"
+          className="rounded-[4px] border border-line-strong px-3 py-1.5 text-[13px] font-medium text-ink transition-colors hover:bg-surface"
         >
           Exportar dossiê (.docx)
         </a>
@@ -78,6 +90,15 @@ export default async function DossieDetalhePage({
         </div>
       </div>
 
+      {dossie.origem === "pncp_real" && documentos.length === 0 && dossie.itens.length === 0 && (
+        <div className="mt-8">
+          <EnriquecerBotao
+            contratacaoId={Number(dossie.id.replace("real-", ""))}
+            numeroControlePNCP={dossie.numeroControlePNCP}
+          />
+        </div>
+      )}
+
       {dossie.origem === "pncp_real" && (
         <section className="mt-8">
           <h2 className="font-display text-lg font-semibold text-ink">Documentos</h2>
@@ -86,7 +107,7 @@ export default async function DossieDetalhePage({
           </p>
           {documentos.length === 0 ? (
             <p className="mt-3 text-[13.5px] italic text-ink-faint">
-              Nenhum documento coletado ainda para esta contratação.
+              Nenhum documento coletado ainda para esta contratação — use o botão acima para buscar agora.
             </p>
           ) : (
             <div className="mt-3 divide-y divide-line border-y border-line">
@@ -102,7 +123,7 @@ export default async function DossieDetalhePage({
                     <div className="flex shrink-0 items-center gap-2">
                       <Link
                         href={`/dossies/${dossie.id}/documento/${doc.id}`}
-                        className="rounded-[4px] border border-line-strong px-2.5 py-1 text-[12.5px] text-ink-soft hover:bg-surface"
+                        className="rounded-[4px] border border-line-strong px-2.5 py-1 text-[12.5px] text-ink-soft transition-colors hover:bg-surface"
                       >
                         Buscar no texto
                       </Link>
@@ -114,6 +135,14 @@ export default async function DossieDetalhePage({
                   )}
                   {doc.statusExtracao === "erro" && (
                     <SeloCompacto tom="neutral">Formato não suportado</SeloCompacto>
+                  )}
+                  {doc.statusExtracao === "extraido_nativo" && (
+                    <DetectarRestritividadeBotao
+                      documentoId={doc.id}
+                      numeroControlePNCP={dossie.numeroControlePNCP}
+                      orgao={dossie.orgao}
+                      objeto={dossie.objeto}
+                    />
                   )}
                 </div>
               ))}
@@ -127,15 +156,15 @@ export default async function DossieDetalhePage({
         {dossie.itens.length === 0 && (
           <p className="mt-2 text-[13.5px] italic text-ink-faint">
             {dossie.origem === "pncp_real"
-              ? "Itens ainda não coletados para esta contratação (coleta parcial em andamento)."
+              ? "Itens ainda não coletados para esta contratação — use o botão acima para buscar agora."
               : "Relação de itens ainda não extraída do documento (só o metadado de publicação foi coletado até aqui)."}
           </p>
         )}
         {dossie.itens.length > 0 && (
           <p className="mt-1 text-[12.5px] text-ink-faint">
-            Faixa de preço por correspondência exata de descrição entre editais (não é busca
-            semântica) — com poucas amostras, mostra &quot;dado insuficiente&quot; em vez de
-            inventar uma faixa.
+            Faixa de preço por similaridade semântica de descrição entre itens de editais reais
+            (embedding local, não string idêntica) — com poucas amostras parecidas o suficiente,
+            mostra &quot;dado insuficiente&quot; em vez de inventar uma faixa.
           </p>
         )}
         {dossie.itens.length > 0 && (
@@ -143,15 +172,15 @@ export default async function DossieDetalhePage({
             <table className="w-full min-w-[640px] text-left text-[13.5px]">
               <thead>
                 <tr className="border-b border-line text-ink-faint">
-                  <th className="py-2 pr-4 font-medium">Descrição</th>
-                  <th className="py-2 pr-4 text-right font-medium">Qtd.</th>
-                  <th className="py-2 pr-4 text-right font-medium">Valor unitário estimado</th>
-                  <th className="py-2 font-medium">Faixa de preço</th>
+                  <th scope="col" className="py-2 pr-4 font-medium">Descrição</th>
+                  <th scope="col" className="py-2 pr-4 text-right font-medium">Qtd.</th>
+                  <th scope="col" className="py-2 pr-4 text-right font-medium">Valor unitário estimado</th>
+                  <th scope="col" className="py-2 font-medium">Faixa de preço</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
                 {dossie.itens.map((item, i) => {
-                  const faixa = calcularFaixaPreco(itensComparaveis, item.descricao);
+                  const faixa = faixasPorItem[i];
                   return (
                     <tr key={i}>
                       <td className="py-2.5 pr-4 text-ink">{item.descricao}</td>
@@ -205,7 +234,7 @@ export default async function DossieDetalhePage({
               <div key={i} className="rounded-[6px] border border-line bg-surface-raised p-4">
                 <div className="text-[13.5px] font-medium text-ink">{achado.criterio}</div>
                 <p className="mt-1 text-[13.5px] leading-relaxed text-ink-soft">{achado.achado}</p>
-                <button className="mt-2.5 rounded-[4px] border border-line-strong px-2.5 py-1 text-[12.5px] text-ink-soft hover:bg-surface">
+                <button className="mt-2.5 rounded-[4px] border border-line-strong px-2.5 py-1 text-[12.5px] text-ink-soft transition-colors hover:bg-surface">
                   Abrir na página {achado.pagina} — &quot;{achado.citacao}&quot;
                 </button>
               </div>

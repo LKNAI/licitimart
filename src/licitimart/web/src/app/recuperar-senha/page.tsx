@@ -30,14 +30,17 @@ export default function RecuperarSenhaPage() {
       ) : (
         <form action={acao} className="mt-8 space-y-3 rounded-[6px] border border-line bg-surface p-6">
           <input name="email" type="email" required placeholder="e-mail" className={campoClasse} />
-          {estado.erro && <p className="text-[13px] text-seal-red">{estado.erro}</p>}
-          <button type="submit" disabled={pendente} className={botaoPrimarioClasse}>
+          <p role="status" aria-live="polite" className="text-[13px] text-seal-red">
+            {estado.erro}
+          </p>
+          <button type="submit" disabled={pendente} className={`flex items-center justify-center gap-2 ${botaoPrimarioClasse}`}>
+            {pendente && <span className="spinner" aria-hidden />}
             {pendente ? "Enviando…" : "Enviar link"}
           </button>
         </form>
       )}
 
-      <Link href="/login" className="mt-5 text-center text-[13px] text-ink-soft hover:text-ink">
+      <Link href="/login" className="mt-5 text-center text-[13px] text-ink-soft transition-colors hover:text-ink">
         Voltar para o login
       </Link>
     </div>

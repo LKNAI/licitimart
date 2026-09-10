@@ -1,12 +1,13 @@
 import Link from "next/link";
 import {
-  listarTodosDossies,
+  DOSSIES_MOCK,
   ROTULO_CONFIABILIDADE,
   ROTULO_ORIGEM,
   ROTULO_VEREDITO,
 } from "@/lib/mock/dossies";
-import { carregarDossiesSupabase } from "@/lib/data/dossiesSupabase";
+import { buscarPaginaDossies } from "@/lib/data/dossiesSupabase";
 import { SeloCompacto, type Tom } from "@/components/Selo";
+import EstadoVazio from "@/components/EstadoVazio";
 
 const TOM_VEREDITO: Record<string, Tom> = {
   go: "green",
@@ -39,40 +40,42 @@ export default async function DossiesPage({
   const { pagina: paginaParam } = await searchParams;
   const pagina = Math.max(1, Number(paginaParam ?? "1") || 1);
 
-  const todos = await listarTodosDossies();
-  const { metadado } = await carregarDossiesSupabase();
-  const totalPaginas = Math.max(1, Math.ceil(todos.length / POR_PAGINA));
-  const inicio = (pagina - 1) * POR_PAGINA;
-  const visiveis = todos.slice(inicio, inicio + POR_PAGINA);
+  // Fase O: paginação real via .range() no Supabase, não fetch-tudo-e-
+  // fatiar em memória (ver plan_fase_o.md) -- essencial com 11k+ linhas.
+  // Mock ilustrativo (3 itens fixos) só aparece na página 1, apendado.
+  const { dossies: reais, totalReais } = await buscarPaginaDossies(pagina, POR_PAGINA);
+  const visiveis = pagina === 1 ? [...reais, ...DOSSIES_MOCK] : reais;
+  const total = totalReais + DOSSIES_MOCK.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalReais / POR_PAGINA));
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
       <h1 className="font-display text-3xl font-semibold text-ink">Dossiês</h1>
       <p className="mt-2 max-w-[75ch] text-[14px] leading-relaxed text-ink-soft">
-        {todos.length} dossiê(s).{" "}
-        {metadado.disponivel ? (
-          <>
-            {ROTULO_ORIGEM.pncp_real} vêm direto da tabela <code className="font-mono text-[13px]">contratacoes</code> no
-            Supabase ({metadado.total} linhas, consulta ao vivo);{" "}
-          </>
-        ) : (
-          <>Não foi possível consultar o Supabase agora. </>
-        )}
+        {total} dossiê(s).{" "}
+        {ROTULO_ORIGEM.pncp_real} vêm direto da tabela <code className="font-mono text-[13px]">contratacoes</code> no
+        Supabase ({totalReais} linhas, consulta ao vivo, paginada);{" "}
         {ROTULO_ORIGEM.mock_ilustrativo} são exemplos de como a tela fica com análise de IA (ainda
         sem chave de LLM configurada) — nenhum item real tem veredito além de Revisão Humana até
         que um humano decida.
       </p>
 
+      {visiveis.length === 0 ? (
+        <EstadoVazio>
+          Nenhum dossiê carregado ainda — se isso for inesperado, confira se o Supabase respondeu
+          acima (&quot;não foi possível consultar&quot;) antes de assumir que a base está vazia.
+        </EstadoVazio>
+      ) : (
       <div className="mt-8 overflow-x-auto border-y border-line">
         <table className="w-full min-w-[840px] text-left text-[13.5px]">
           <thead>
             <tr className="border-b border-line text-ink-faint">
-              <th className="py-2.5 pr-4 font-medium">Órgão / Objeto</th>
-              <th className="py-2.5 pr-4 font-medium">Modalidade</th>
-              <th className="py-2.5 pr-4 text-right font-medium">Valor estimado</th>
-              <th className="py-2.5 pr-4 font-medium">Veredito</th>
-              <th className="py-2.5 pr-4 font-medium">Confiabilidade</th>
-              <th className="py-2.5 font-medium">Origem</th>
+              <th scope="col" className="py-2.5 pr-4 font-medium">Órgão / Objeto</th>
+              <th scope="col" className="py-2.5 pr-4 font-medium">Modalidade</th>
+              <th scope="col" className="py-2.5 pr-4 text-right font-medium">Valor estimado</th>
+              <th scope="col" className="py-2.5 pr-4 font-medium">Veredito</th>
+              <th scope="col" className="py-2.5 pr-4 font-medium">Confiabilidade</th>
+              <th scope="col" className="py-2.5 font-medium">Origem</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -104,7 +107,9 @@ export default async function DossiesPage({
           </tbody>
         </table>
       </div>
+      )}
 
+      {totalReais > 0 && (
       <div className="mt-4 flex items-center justify-between text-[13px] text-ink-soft">
         <span className="font-mono">
           página {pagina} de {totalPaginas}
@@ -113,7 +118,7 @@ export default async function DossiesPage({
           {pagina > 1 && (
             <Link
               href={`/dossies?pagina=${pagina - 1}`}
-              className="rounded-[4px] border border-line-strong px-3 py-1.5 hover:bg-surface"
+              className="rounded-[4px] border border-line-strong px-3 py-1.5 transition-colors hover:bg-surface"
             >
               Anterior
             </Link>
@@ -121,13 +126,14 @@ export default async function DossiesPage({
           {pagina < totalPaginas && (
             <Link
               href={`/dossies?pagina=${pagina + 1}`}
-              className="rounded-[4px] border border-line-strong px-3 py-1.5 hover:bg-surface"
+              className="rounded-[4px] border border-line-strong px-3 py-1.5 transition-colors hover:bg-surface"
             >
               Próxima
             </Link>
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -32,7 +32,7 @@ export default function VeredictoBotoes({
   const [pendente, iniciar] = useTransition();
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {OPCOES.map((v) => {
         const ativo = v === vereditoAtual;
         return (
@@ -40,15 +40,22 @@ export default function VeredictoBotoes({
             key={v}
             type="button"
             disabled={pendente || ativo}
+            aria-pressed={ativo}
             onClick={() => iniciar(async () => { await definirVeredito(contratacaoId, v); })}
             className={`rounded-[4px] border px-3 py-1.5 text-[13px] font-medium transition-colors disabled:opacity-100 ${
-              ativo ? ESTILO_ATIVO[v] : "border-line-strong text-ink-soft hover:bg-surface"
+              ativo ? ESTILO_ATIVO[v] : "border-line-strong text-ink-soft hover:bg-surface disabled:opacity-50"
             }`}
           >
             {ROTULO_VEREDITO[v]}
           </button>
         );
       })}
+      {pendente && (
+        <span role="status" aria-live="polite" className="flex items-center gap-1.5 text-[12px] text-ink-faint">
+          <span className="spinner" aria-hidden />
+          salvando…
+        </span>
+      )}
     </div>
   );
 }

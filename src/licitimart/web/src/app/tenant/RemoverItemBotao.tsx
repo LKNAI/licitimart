@@ -11,9 +11,9 @@ export default function RemoverItemBotao({ itemId }: { itemId: number }) {
       type="button"
       disabled={pendente}
       onClick={() => iniciar(async () => { await removerItem(itemId); })}
-      className="text-[12.5px] text-seal-red hover:underline disabled:opacity-50"
+      className="text-[12.5px] text-seal-red underline-offset-2 transition-colors hover:underline disabled:opacity-50"
     >
-      remover
+      {pendente ? "removendo…" : "remover"}
     </button>
   );
 }

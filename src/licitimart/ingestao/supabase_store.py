@@ -114,20 +114,32 @@ def upsert_contratacoes(cliente: Client, itens_pncp: list[dict]) -> int:
     if not linhas:
         return 0
 
-    numeros = [l["numero_controle_pncp"] for l in linhas]
-    resposta_antigas = (
-        cliente.table("contratacoes")
-        .select("id,numero_controle_pncp,orgao,municipio_uf,objeto,modalidade,valor_estimado,data_publicacao")
-        .in_("numero_controle_pncp", numeros)
-        .execute()
-    )
-    antigas_por_numero = {r["numero_controle_pncp"]: r for r in resposta_antigas.data}
+    # Lote maximo por chamada -- um .in_() ou upsert com o chunk inteiro
+    # de uma vez (visto na pratica: >1.300 linhas num mes de alto volume,
+    # ex. Pregao Eletronico) estoura o limite de tamanho de URL/corpo do
+    # gateway antes de chegar no PostgREST (erro 400 "JSON could not be
+    # generated" -- resposta nao-JSON de erro de URL grande demais).
+    TAMANHO_LOTE = 200
+
+    antigas_por_numero: dict[str, dict] = {}
+    for i in range(0, len(linhas), TAMANHO_LOTE):
+        lote_numeros = [l["numero_controle_pncp"] for l in linhas[i:i + TAMANHO_LOTE]]
+        resposta_antigas = (
+            cliente.table("contratacoes")
+            .select("id,numero_controle_pncp,orgao,municipio_uf,objeto,modalidade,valor_estimado,data_publicacao")
+            .in_("numero_controle_pncp", lote_numeros)
+            .execute()
+        )
+        for r in resposta_antigas.data:
+            antigas_por_numero[r["numero_controle_pncp"]] = r
 
     retificacoes = _detectar_retificacoes(linhas, antigas_por_numero)
     if retificacoes:
-        cliente.table("retificacoes").insert(retificacoes).execute()
+        for i in range(0, len(retificacoes), TAMANHO_LOTE):
+            cliente.table("retificacoes").insert(retificacoes[i:i + TAMANHO_LOTE]).execute()
 
-    cliente.table("contratacoes").upsert(linhas, on_conflict="numero_controle_pncp").execute()
+    for i in range(0, len(linhas), TAMANHO_LOTE):
+        cliente.table("contratacoes").upsert(linhas[i:i + TAMANHO_LOTE], on_conflict="numero_controle_pncp").execute()
     return len(linhas)
 
 

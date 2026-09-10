@@ -4,7 +4,7 @@
 // primeira classe, ERS secao 4.1), RF-019 (Selo de Confiabilidade) e
 // RF-020 (estados nao-conclusivos exibidos explicitamente, nunca
 // escondidos atras de um score bonito).
-import { carregarDossiesSupabase } from "@/lib/data/dossiesSupabase";
+import { buscarDossiePorId, carregarDossiesSupabase } from "@/lib/data/dossiesSupabase";
 
 export type Veredito = "go" | "no_go" | "revisao_humana";
 export type Confiabilidade = "confirmado" | "fonte_unica" | "divergente";
@@ -18,6 +18,10 @@ export interface Achado {
 }
 
 export interface ItemLicitacao {
+  // Fase P: id real de itens_licitacao, quando existir -- usado pra
+  // excluir o próprio item da comparação semântica de preço (nunca
+  // comparar um item contra ele mesmo). Mock ilustrativo não tem id.
+  id?: number;
   descricao: string;
   quantidade: number;
   valorUnitarioEstimado: number;
@@ -135,9 +139,16 @@ export async function listarTodosDossies(): Promise<Dossie[]> {
   return [...dossies, ...DOSSIES_MOCK];
 }
 
+// Fase O: id real busca direto por id (corrige 404 em contratação fora
+// das 1.000 mais recentes -- ver plan_fase_o.md); só o mock ilustrativo
+// ainda passa pela lista em memória (são 3 itens fixos).
 export async function buscarDossie(id: string): Promise<Dossie | undefined> {
-  const todos = await listarTodosDossies();
-  return todos.find((d) => d.id === id);
+  if (id.startsWith("real-")) {
+    const idNumerico = Number(id.replace("real-", ""));
+    if (Number.isNaN(idNumerico)) return undefined;
+    return buscarDossiePorId(idNumerico);
+  }
+  return DOSSIES_MOCK.find((d) => d.id === id);
 }
 
 export const ROTULO_VEREDITO: Record<Veredito, string> = {

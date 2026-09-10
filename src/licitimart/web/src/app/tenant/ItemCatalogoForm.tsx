@@ -23,14 +23,21 @@ export default function ItemCatalogoForm({ tenantId }: { tenantId: number }) {
         <label className="block text-[12px] text-ink-faint">CNAE (opcional)</label>
         <input name="cnae" placeholder="4645-1/02" className={`mt-1 w-40 ${campoClasse}`} />
       </div>
+      <div>
+        <label className="block text-[12px] text-ink-faint">NCM (opcional)</label>
+        <input name="ncm" placeholder="9018.90.99" className={`mt-1 w-32 ${campoClasse}`} />
+      </div>
       <button
         type="submit"
         disabled={pendente}
-        className="rounded-[4px] bg-ink px-4 py-2.5 text-[14px] font-medium text-paper hover:bg-seal-green disabled:opacity-50"
+        className="flex items-center gap-2 rounded-[4px] bg-ink px-4 py-2.5 text-[14px] font-medium text-paper transition-colors hover:bg-seal-green disabled:pointer-events-none disabled:opacity-50"
       >
+        {pendente && <span className="spinner" aria-hidden />}
         {pendente ? "Adicionando…" : "Adicionar"}
       </button>
-      {estado.erro && <p className="w-full text-[13px] text-seal-red">{estado.erro}</p>}
+      <p role="status" aria-live="polite" className="w-full text-[13px] text-seal-red">
+        {estado.erro}
+      </p>
     </form>
   );
 }

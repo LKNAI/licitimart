@@ -52,8 +52,8 @@ export default async function MembrosPage() {
         <table className="w-full text-left text-[13.5px]">
           <thead>
             <tr className="border-b border-line text-ink-faint">
-              <th className="py-2.5 font-medium">E-mail</th>
-              <th className="py-2.5 font-medium">Papel</th>
+              <th scope="col" className="py-2.5 font-medium">E-mail</th>
+              <th scope="col" className="py-2.5 font-medium">Papel</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">

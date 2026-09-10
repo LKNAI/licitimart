@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { criarClienteSupabaseServer } from "@/lib/supabase/server";
 import type { Veredito } from "@/lib/mock/dossies";
+import { baixarArquivo, buscarArquivos, buscarItens, respiro } from "@/lib/pncp/client";
+import { extrairTexto } from "@/lib/pncp/extracao";
+import { detectar } from "@/lib/impugnacao/detector";
+import { gerarMinuta } from "@/lib/impugnacao/minuta";
 
 export async function definirVeredito(contratacaoId: number, veredito: Veredito) {
   const supabase = await criarClienteSupabaseServer();
@@ -31,4 +35,140 @@ export async function definirVeredito(contratacaoId: number, veredito: Veredito)
   revalidatePath("/pipeline");
   revalidatePath(`/dossies/real-${contratacaoId}`);
   return { erro: "" };
+}
+
+// Fase N: enriquecimento sob demanda (RF-002/RF-008) -- disparado pelo
+// clique do usuário em /dossies/[id], não por um backfill em lote
+// prévio. Busca no PNCP em tempo real (client.ts/extracao.ts, runtime
+// Node) só o que ainda falta -- nunca refaz uma chamada para o que já
+// está no Supabase.
+export async function buscarEnriquecimento(contratacaoId: number, numeroControlePncp: string) {
+  const supabase = await criarClienteSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { erro: "Sessão expirada." };
+
+  const { count: totalItens } = await supabase
+    .from("itens_licitacao")
+    .select("id", { count: "exact", head: true })
+    .eq("contratacao_id", contratacaoId);
+  const { count: totalDocumentos } = await supabase
+    .from("documentos_contratacao")
+    .select("id", { count: "exact", head: true })
+    .eq("contratacao_id", contratacaoId);
+
+  if (!totalItens) {
+    const itens = await buscarItens(numeroControlePncp);
+    if (itens !== null) {
+      await supabase.from("itens_licitacao").delete().eq("contratacao_id", contratacaoId);
+      if (itens.length > 0) {
+        const { error } = await supabase.from("itens_licitacao").insert(
+          itens.map((item) => ({
+            contratacao_id: contratacaoId,
+            descricao: item.descricao || "(sem descrição)",
+            quantidade: item.quantidade ?? null,
+            valor_unitario_estimado: item.valorUnitarioEstimado ?? null,
+          }))
+        );
+        if (error) return { erro: error.message };
+      }
+    }
+  }
+
+  await respiro();
+
+  if (!totalDocumentos) {
+    const arquivos = await buscarArquivos(numeroControlePncp);
+    const edital = arquivos?.find((a) => (a.tipoDocumentoNome ?? "").toLowerCase().includes("edital"));
+    if (edital) {
+      const conteudo = await baixarArquivo(edital.url);
+      if (conteudo) {
+        const { texto, status, paginas, offsets } = await extrairTexto(conteudo);
+        const caminho = `${numeroControlePncp}/${edital.sequencialDocumento}_${edital.titulo}`;
+        const { error: erroUpload } = await supabase.storage
+          .from("editais-documentos")
+          .upload(caminho, Buffer.from(conteudo), { upsert: true, contentType: "application/octet-stream" });
+        if (erroUpload) return { erro: erroUpload.message };
+
+        const { error: erroDocumento } = await supabase.from("documentos_contratacao").upsert(
+          {
+            contratacao_id: contratacaoId,
+            sequencial_documento: edital.sequencialDocumento,
+            titulo: edital.titulo,
+            tipo_documento: edital.tipoDocumentoNome ?? null,
+            storage_path: caminho,
+            texto_extraido: texto || null,
+            status_extracao: status,
+            paginas: paginas || null,
+            paginas_offsets: offsets.length ? offsets : null,
+          },
+          { onConflict: "contratacao_id,sequencial_documento" }
+        );
+        if (erroDocumento) return { erro: erroDocumento.message };
+      }
+    }
+  }
+
+  revalidatePath(`/dossies/real-${contratacaoId}`);
+  return { erro: "" };
+}
+
+// Fase Q: Impugnação Assistida sobre documento REAL (RF-017) -- detector
+// determinístico (regex, mesmo motor do spike 03, sem LLM) rodado sob
+// demanda contra o texto já extraído. Achado zero é resultado válido
+// (não é "ainda não avaliado") -- nunca escondido.
+export async function detectarRestritividade(
+  documentoId: number,
+  contexto: { numeroControlePncp: string; orgao: string; objeto: string }
+) {
+  const supabase = await criarClienteSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { erro: "Sessão expirada.", achadosCount: 0 };
+
+  const { data: membresia } = await supabase
+    .from("tenant_membros")
+    .select("tenant_id")
+    .eq("user_id", user.id)
+    .limit(1)
+    .single();
+  if (!membresia) return { erro: "Usuário sem tenant.", achadosCount: 0 };
+
+  const { data: documento, error: erroDocumento } = await supabase
+    .from("documentos_contratacao")
+    .select("texto_extraido")
+    .eq("id", documentoId)
+    .single();
+  if (erroDocumento || !documento?.texto_extraido) {
+    return { erro: "Documento sem texto extraído.", achadosCount: 0 };
+  }
+
+  const achados = detectar(documento.texto_extraido);
+  if (achados.length === 0) {
+    return { erro: "", achadosCount: 0 };
+  }
+
+  const minutaMarkdown = gerarMinuta(
+    { numeroControlePncp: contexto.numeroControlePncp, orgao: contexto.orgao, objeto: contexto.objeto },
+    achados
+  );
+
+  const { error: erroInsert } = await supabase.from("impugnacoes").insert({
+    tenant_id: membresia.tenant_id,
+    contexto: {
+      numero_controle_pncp: contexto.numeroControlePncp,
+      orgao: contexto.orgao,
+      objeto: contexto.objeto,
+      documento_id: documentoId,
+      achados,
+    },
+    minuta_markdown: minutaMarkdown,
+    gerado_por: "template_deterministico_edital_real",
+  });
+  if (erroInsert) return { erro: erroInsert.message, achadosCount: 0 };
+
+  revalidatePath("/impugnacoes");
+  return { erro: "", achadosCount: achados.length };
 }

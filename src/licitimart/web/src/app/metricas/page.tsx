@@ -1,49 +1,50 @@
-import { listarTodosDossies, ROTULO_VEREDITO, Veredito } from "@/lib/mock/dossies";
-import { carregarDossiesSupabase } from "@/lib/data/dossiesSupabase";
+import { ROTULO_VEREDITO, Veredito } from "@/lib/mock/dossies";
+import { buscarMetricas } from "@/lib/data/dossiesSupabase";
+
+// Fase O: agregado direto do Postgres (RPC metricas_contratacoes), não
+// reduce sobre um array de até 1.000 linhas carregado em memória -- ver
+// plan_fase_o.md. O mock ilustrativo (3 itens fixos) é somado à parte,
+// sem entrar na agregação SQL.
+const MOCK_TOTAL = 3;
+const MOCK_POR_VEREDITO: Record<Veredito, number> = { go: 1, revisao_humana: 1, no_go: 1 };
 
 function formatarMoeda(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 }
 
 export default async function MetricasPage() {
-  const todos = await listarTodosDossies();
-  const { metadado } = await carregarDossiesSupabase();
+  const metricas = await buscarMetricas();
 
-  const reais = todos.filter((d) => d.origem === "pncp_real");
-  const mock = todos.filter((d) => d.origem === "mock_ilustrativo");
-
+  const totalGeral = metricas.total + MOCK_TOTAL;
   const porVeredito = (["go", "revisao_humana", "no_go"] as Veredito[]).map((v) => ({
     veredito: v,
-    total: todos.filter((d) => d.veredito === v).length,
+    total: metricas.porVeredito[v] + MOCK_POR_VEREDITO[v],
   }));
-
-  const valorTotalEstimado = todos.reduce((soma, d) => soma + d.valorEstimado, 0);
-  const maiorValor = todos.reduce((max, d) => Math.max(max, d.valorEstimado), 0);
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
       <h1 className="font-display text-3xl font-semibold text-ink">Métricas</h1>
       <p className="mt-2 max-w-[75ch] text-[14.5px] leading-relaxed text-ink-soft">
-        Esta tela é agregação direta sobre {todos.length} dossiês já carregados ({reais.length}{" "}
-        reais do PNCP, {mock.length} ilustrativos) — não um número inventado.
+        Esta tela é agregação SQL sobre a base inteira ({metricas.total} reais do PNCP,{" "}
+        {MOCK_TOTAL} ilustrativos) — não um recorte carregado em memória.
       </p>
 
       <div className="mt-8 grid grid-cols-2 divide-x divide-y divide-line border border-line md:grid-cols-4 md:divide-y-0">
         <div className="p-5">
           <div className="text-[12px] text-ink-faint">Total de dossiês</div>
-          <div className="mt-1 font-display text-[26px] font-semibold text-ink">{todos.length}</div>
+          <div className="mt-1 font-display text-[26px] font-semibold text-ink">{totalGeral}</div>
         </div>
         <div className="border-l-2 border-l-seal-blue p-5">
           <div className="text-[12px] text-seal-blue">PNCP real</div>
-          <div className="mt-1 font-display text-[26px] font-semibold text-seal-blue">{reais.length}</div>
+          <div className="mt-1 font-display text-[26px] font-semibold text-seal-blue">{metricas.total}</div>
         </div>
         <div className="p-5">
           <div className="text-[12px] text-ink-faint">Ilustrativo (mock)</div>
-          <div className="mt-1 font-display text-[26px] font-semibold text-ink-soft">{mock.length}</div>
+          <div className="mt-1 font-display text-[26px] font-semibold text-ink-soft">{MOCK_TOTAL}</div>
         </div>
         <div className="p-5">
           <div className="text-[12px] text-ink-faint">Valor total estimado</div>
-          <div className="mt-1 font-mono text-[21px] font-semibold text-ink">{formatarMoeda(valorTotalEstimado)}</div>
+          <div className="mt-1 font-mono text-[21px] font-semibold text-ink">{formatarMoeda(metricas.valorTotal)}</div>
         </div>
       </div>
 
@@ -54,7 +55,7 @@ export default async function MetricasPage() {
       </p>
       <div className="mt-4 space-y-2.5">
         {porVeredito.map(({ veredito, total }) => {
-          const pct = todos.length ? Math.round((total / todos.length) * 100) : 0;
+          const pct = totalGeral ? Math.round((total / totalGeral) * 100) : 0;
           return (
             <div key={veredito} className="flex items-center gap-3">
               <span className="w-32 text-[13.5px] text-ink-soft">{ROTULO_VEREDITO[veredito]}</span>
@@ -70,11 +71,11 @@ export default async function MetricasPage() {
       </div>
 
       <h2 className="mt-10 font-display text-lg font-semibold text-ink">Procedência do dado real</h2>
-      {metadado.disponivel ? (
+      {metricas.disponivel ? (
         <ul className="mt-2 space-y-1 text-[13.5px] text-ink-soft">
-          <li>Fonte: consulta ao vivo à tabela <code className="font-mono text-[12.5px]">contratacoes</code> no Supabase (RLS, usuário autenticado)</li>
-          <li>Total de linhas na tabela: {metadado.total}</li>
-          <li>Maior valor estimado no lote carregado: {formatarMoeda(maiorValor)}</li>
+          <li>Fonte: agregação SQL ao vivo (RPC) sobre a tabela <code className="font-mono text-[12.5px]">contratacoes</code> no Supabase (RLS, usuário autenticado)</li>
+          <li>Total de linhas na tabela: {metricas.total}</li>
+          <li>Maior valor estimado na base: {formatarMoeda(metricas.maiorValor)}</li>
         </ul>
       ) : (
         <p className="mt-2 text-[13.5px] italic text-ink-faint">

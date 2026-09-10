@@ -32,18 +32,21 @@ export default function BuscaPage() {
         <button
           type="submit"
           disabled={pendente}
-          className="shrink-0 rounded-[4px] bg-ink px-5 text-[14px] font-medium text-paper hover:bg-seal-green disabled:opacity-50"
+          className="flex shrink-0 items-center gap-2 rounded-[4px] bg-ink px-5 text-[14px] font-medium text-paper transition-colors hover:bg-seal-green disabled:pointer-events-none disabled:opacity-50"
         >
+          {pendente && <span className="spinner" aria-hidden />}
           {pendente ? "Buscando…" : "Buscar"}
         </button>
       </form>
 
-      {estado.erro && <p className="mt-4 text-[13px] text-seal-red">{estado.erro}</p>}
+      <p role="status" aria-live="polite" className="mt-4 text-[13px] text-seal-red">
+        {estado.erro}
+      </p>
 
       {estado.resultados.length > 0 && (
         <div className="mt-8 divide-y divide-line border-y border-line">
           {estado.resultados.map((r) => (
-            <Link key={r.id} href={`/dossies/real-${r.id}`} className="block py-3.5 hover:bg-surface">
+            <Link key={r.id} href={`/dossies/real-${r.id}`} className="block py-3.5 transition-colors hover:bg-surface">
               <div className="flex items-start justify-between gap-3">
                 <div className="text-[14px] font-medium text-ink">{r.objeto ?? "(objeto não informado)"}</div>
                 <span className="shrink-0 font-mono text-[11.5px] text-ink-faint">{r.score.toFixed(4)}</span>

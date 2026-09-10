@@ -25,7 +25,7 @@ export default function DocumentoBuscaPage({
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
-      <Link href={`/dossies/${id}`} className="text-[13px] text-ink-soft hover:text-ink">
+      <Link href={`/dossies/${id}`} className="text-[13px] text-ink-soft transition-colors hover:text-ink">
         ← Voltar ao dossiê
       </Link>
 
@@ -43,12 +43,19 @@ export default function DocumentoBuscaPage({
           placeholder="ex.: prazo de entrega"
           className={`flex-1 ${campoClasse}`}
         />
-        <button type="submit" disabled={pendente} className="shrink-0 rounded-[4px] bg-ink px-5 text-[14px] font-medium text-paper hover:bg-seal-green disabled:opacity-50">
+        <button
+          type="submit"
+          disabled={pendente}
+          className="flex shrink-0 items-center gap-2 rounded-[4px] bg-ink px-5 text-[14px] font-medium text-paper transition-colors hover:bg-seal-green disabled:pointer-events-none disabled:opacity-50"
+        >
+          {pendente && <span className="spinner" aria-hidden />}
           {pendente ? "Buscando…" : "Buscar"}
         </button>
       </form>
 
-      {estado.erro && <p className="mt-4 text-[13px] text-seal-red">{estado.erro}</p>}
+      <p role="status" aria-live="polite" className="mt-4 text-[13px] text-seal-red">
+        {estado.erro}
+      </p>
 
       {estado.ocorrencias.length > 0 && (
         <div className="mt-6 divide-y divide-line border-y border-line">

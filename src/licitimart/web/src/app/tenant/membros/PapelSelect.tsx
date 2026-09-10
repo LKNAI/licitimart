@@ -38,7 +38,7 @@ export default function PapelSelect({
             }
           });
         }}
-        className="rounded-[4px] border border-line-strong bg-surface-raised p-1.5 text-[13px] text-ink"
+        className="rounded-[4px] border border-line-strong bg-surface-raised p-1.5 text-[13px] text-ink transition-colors disabled:opacity-60"
       >
         {PAPEIS.map((p) => (
           <option key={p} value={p}>
@@ -46,6 +46,7 @@ export default function PapelSelect({
           </option>
         ))}
       </select>
+      {pendente && <span className="spinner text-ink-faint" aria-hidden />}
       <button
         type="button"
         disabled={pendente}
@@ -56,11 +57,13 @@ export default function PapelSelect({
             if (resultado?.erro) setErro(resultado.erro);
           });
         }}
-        className="text-[12.5px] text-seal-red hover:underline disabled:opacity-50"
+        className="text-[12.5px] text-seal-red underline-offset-2 transition-colors hover:underline disabled:opacity-50"
       >
         remover
       </button>
-      {erro && <span className="text-[12.5px] text-seal-red">{erro}</span>}
+      <span role="status" aria-live="polite" className="text-[12.5px] text-seal-red">
+        {erro}
+      </span>
     </div>
   );
 }
