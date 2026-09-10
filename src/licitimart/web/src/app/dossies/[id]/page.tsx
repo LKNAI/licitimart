@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buscarDossie, ROTULO_CONFIABILIDADE, ROTULO_ORIGEM, ROTULO_VEREDITO } from "@/lib/mock/dossies";
-import { buscarItensComparaveis } from "@/lib/data/dossiesSupabase";
+import { buscarItensComparaveis, buscarDocumentosContratacao } from "@/lib/data/dossiesSupabase";
 import { calcularFaixaPreco } from "@/lib/precificacao";
 import VeredictoBotoes from "./VeredictoBotoes";
 
@@ -15,6 +15,9 @@ export default async function DossieDetalhePage({
   if (!dossie) notFound();
 
   const itensComparaveis = await buscarItensComparaveis(dossie.itens.map((i) => i.descricao));
+  const documentos = dossie.origem === "pncp_real"
+    ? await buscarDocumentosContratacao(Number(dossie.id.replace("real-", "")))
+    : [];
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
@@ -59,6 +62,49 @@ export default async function DossieDetalhePage({
           <div className="mt-1 text-lg font-semibold">{ROTULO_CONFIABILIDADE[dossie.confiabilidade]}</div>
         </div>
       </div>
+
+      {dossie.origem === "pncp_real" && (
+        <>
+          <h2 className="mt-8 text-lg font-semibold">Documentos</h2>
+          <p className="mt-1 text-xs text-neutral-400">
+            RF-002 — extração nativa de PDF/DOCX (sem OCR pago nesta fase). Backfill parcial, ver
+            <code> scripts/backfill_documentos.py</code>.
+          </p>
+          {documentos.length === 0 ? (
+            <p className="mt-2 text-sm italic text-neutral-500">
+              Nenhum documento coletado ainda para esta contratação.
+            </p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {documentos.map((doc, i) => (
+                <div key={i} className="flex items-center justify-between rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm">
+                  <div>
+                    <div className="font-medium text-neutral-800">{doc.titulo ?? "(sem título)"}</div>
+                    <div className="text-xs text-neutral-400">
+                      {doc.tipoDocumento} {doc.paginas ? `— ${doc.paginas} página(s)` : ""}
+                    </div>
+                  </div>
+                  {doc.statusExtracao === "extraido_nativo" && (
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">
+                      Texto extraído
+                    </span>
+                  )}
+                  {doc.statusExtracao === "requer_ocr" && (
+                    <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+                      Requer OCR (não construído — RF-002/v2)
+                    </span>
+                  )}
+                  {doc.statusExtracao === "erro" && (
+                    <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-600">
+                      Formato não suportado
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
 
       <h2 className="mt-8 text-lg font-semibold">Itens</h2>
       {dossie.itens.length === 0 && (

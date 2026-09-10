@@ -149,6 +149,40 @@ def upsert_itens_licitacao(cliente: Client, contratacao_id: int, itens_pncp: lis
     return len(linhas)
 
 
+BUCKET_DOCUMENTOS = "editais-documentos"
+
+
+def salvar_documento(
+    cliente: Client,
+    contratacao_id: int,
+    numero_controle_pncp: str,
+    sequencial_documento: int,
+    titulo: str,
+    tipo_documento: str,
+    conteudo: bytes,
+    texto_extraido: str,
+    status_extracao: str,
+    paginas: int,
+) -> None:
+    """Upload no Storage + upsert em documentos_contratacao. Path
+    prefixado por numero_controle_pncp -- legivel, sem colisao entre
+    contratacoes diferentes."""
+    caminho = f"{numero_controle_pncp}/{sequencial_documento}_{titulo}"
+    cliente.storage.from_(BUCKET_DOCUMENTOS).upload(
+        caminho, conteudo, {"upsert": "true", "content-type": "application/octet-stream"}
+    )
+    cliente.table("documentos_contratacao").upsert({
+        "contratacao_id": contratacao_id,
+        "sequencial_documento": sequencial_documento,
+        "titulo": titulo,
+        "tipo_documento": tipo_documento,
+        "storage_path": caminho,
+        "texto_extraido": texto_extraido or None,
+        "status_extracao": status_extracao,
+        "paginas": paginas or None,
+    }, on_conflict="contratacao_id,sequencial_documento").execute()
+
+
 def registrar_manifesto(cliente: Client, fonte: str, consulta: dict, contagem: int) -> None:
     """RNF-013 -- procedencia de cada lote de coleta. sha256 calculado
     sobre a propria consulta+contagem (nao sobre o payload bruto completo,

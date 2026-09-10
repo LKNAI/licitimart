@@ -83,6 +83,28 @@ export async function carregarDossiesSupabase(): Promise<{ dossies: Dossie[]; me
   return { dossies, metadado: { disponivel: true, total: count ?? dossies.length } };
 }
 
+export interface DocumentoContratacao {
+  titulo: string | null;
+  tipoDocumento: string | null;
+  statusExtracao: "extraido_nativo" | "requer_ocr" | "erro";
+  paginas: number | null;
+}
+
+// RF-002 -- documentos reais (backfill parcial via scripts/backfill_documentos.py).
+export async function buscarDocumentosContratacao(contratacaoIdReal: number): Promise<DocumentoContratacao[]> {
+  const supabase = await criarClienteSupabaseServer();
+  const { data } = await supabase
+    .from("documentos_contratacao")
+    .select("titulo, tipo_documento, status_extracao, paginas")
+    .eq("contratacao_id", contratacaoIdReal);
+  return (data ?? []).map((row) => ({
+    titulo: row.titulo,
+    tipoDocumento: row.tipo_documento,
+    statusExtracao: row.status_extracao as DocumentoContratacao["statusExtracao"],
+    paginas: row.paginas,
+  }));
+}
+
 // RF-008 -- itens de QUALQUER contratação real com a mesma descrição
 // exata, para servir de amostra ao cálculo de faixa de preço
 // (src/lib/precificacao.ts). Dado público, sem escopo de tenant --

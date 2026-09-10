@@ -156,6 +156,52 @@ class ColetorPublicacaoPNCP:
                             resp.status_code, numero_controle_pncp, resp.text[:200])
             return None
 
+    def buscar_arquivos(self, numero_controle_pncp: str) -> list[dict] | None:
+        """Lista de documentos (RF-002) de uma contratacao. Retorna None
+        em erro/instabilidade (mesma convencao de buscar_itens)."""
+        cnpj, sequencial, ano = _parsear_numero_controle(numero_controle_pncp)
+        self._throttle.aguardar_vez()
+        url = f"{BASE_URL_ITENS}/orgaos/{cnpj}/compras/{ano}/{sequencial}/arquivos"
+        try:
+            resp = self._cliente.get(url)
+        except httpx.RequestError as exc:
+            self._throttle.registrar_erro_rede()
+            logger.info("erro de rede buscando arquivos de %s: %s", numero_controle_pncp, exc)
+            return None
+
+        if resp.status_code == 200:
+            self._throttle.registrar_sucesso()
+            corpo = resp.json()
+            return corpo if isinstance(corpo, list) else []
+        elif resp.status_code == 404:
+            self._throttle.registrar_sucesso()
+            return []
+        elif resp.status_code in (429, 503):
+            self._throttle.registrar_erro_taxa()
+            return None
+        else:
+            logger.warning("status inesperado %s buscando arquivos de %s: %s",
+                            resp.status_code, numero_controle_pncp, resp.text[:200])
+            return None
+
+    def baixar_arquivo(self, url: str) -> bytes | None:
+        """Baixa o conteudo binario de um documento (PDF/DOCX). Documento
+        real pode ter alguns MB -- timeout maior que o das chamadas de
+        metadado/itens, e SEM aplicar o throttle de novo aqui (a chamada
+        de listagem em buscar_arquivos ja passou pelo throttle; download
+        de bytes de um endpoint distinto nao precisa duplicar a espera,
+        mas tambem nao deve ser chamado em rajada por quem usa este
+        metodo -- respeitar o mesmo espírito de paginas por vez)."""
+        try:
+            resp = self._cliente.get(url, timeout=30.0, follow_redirects=True)
+        except httpx.RequestError as exc:
+            logger.info("erro de rede baixando arquivo %s: %s", url, exc)
+            return None
+        if resp.status_code != 200:
+            logger.warning("status inesperado %s baixando arquivo %s", resp.status_code, url)
+            return None
+        return resp.content
+
     def coletar_dia(self, data_inicial: str, data_final: str, orcamento_segundos: float | None = None) -> Iterator[dict]:
         """Gera itens (dict cru da API) de todas as modalidades para a
         janela de datas, retentando primeiro pendencias antigas da mesma
