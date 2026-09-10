@@ -17,9 +17,9 @@ const ROTULO_VEREDITO: Record<Veredito, string> = {
 const OPCOES: Veredito[] = ["go", "revisao_humana", "no_go"];
 
 const ESTILO_ATIVO: Record<Veredito, string> = {
-  go: "bg-emerald-600 text-white border-emerald-600",
-  revisao_humana: "bg-amber-500 text-white border-amber-500",
-  no_go: "bg-red-600 text-white border-red-600",
+  go: "bg-seal-green text-paper border-seal-green",
+  revisao_humana: "bg-seal-amber text-paper border-seal-amber",
+  no_go: "bg-seal-red text-paper border-seal-red",
 };
 
 export default function VeredictoBotoes({
@@ -41,8 +41,8 @@ export default function VeredictoBotoes({
             type="button"
             disabled={pendente || ativo}
             onClick={() => iniciar(async () => { await definirVeredito(contratacaoId, v); })}
-            className={`rounded-md border px-3 py-1.5 text-sm font-medium disabled:opacity-100 ${
-              ativo ? ESTILO_ATIVO[v] : "border-neutral-300 text-neutral-600 hover:bg-neutral-100"
+            className={`rounded-[4px] border px-3 py-1.5 text-[13px] font-medium transition-colors disabled:opacity-100 ${
+              ativo ? ESTILO_ATIVO[v] : "border-line-strong text-ink-soft hover:bg-surface"
             }`}
           >
             {ROTULO_VEREDITO[v]}

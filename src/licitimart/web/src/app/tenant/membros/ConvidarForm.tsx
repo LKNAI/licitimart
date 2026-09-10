@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { convidar } from "./actions";
+import { campoClasse } from "@/components/ui";
 
 const estadoInicial = { erro: "" };
 
@@ -13,14 +14,14 @@ export default function ConvidarForm({ tenantId }: { tenantId: number }) {
   );
 
   return (
-    <form action={acao} className="mt-4 flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-4">
+    <form action={acao} className="mt-6 flex flex-wrap items-end gap-3 border-l-2 border-line-strong bg-surface p-4">
       <div>
-        <label className="block text-xs font-medium text-neutral-600">E-mail (conta já existente)</label>
-        <input name="email" type="email" required placeholder="pessoa@empresa.com" className="mt-1 w-56 rounded-md border border-neutral-300 p-2 text-sm" />
+        <label className="block text-[12px] text-ink-faint">E-mail (conta já existente)</label>
+        <input name="email" type="email" required placeholder="pessoa@empresa.com" className={`mt-1 w-56 ${campoClasse}`} />
       </div>
       <div>
-        <label className="block text-xs font-medium text-neutral-600">Papel</label>
-        <select name="papel" defaultValue="analista" className="mt-1 rounded-md border border-neutral-300 p-2 text-sm">
+        <label className="block text-[12px] text-ink-faint">Papel</label>
+        <select name="papel" defaultValue="analista" className={`mt-1 ${campoClasse}`}>
           <option value="analista">analista</option>
           <option value="gestor_comercial">gestor_comercial</option>
           <option value="juridico_compliance">juridico_compliance</option>
@@ -30,11 +31,11 @@ export default function ConvidarForm({ tenantId }: { tenantId: number }) {
       <button
         type="submit"
         disabled={pendente}
-        className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+        className="rounded-[4px] bg-ink px-4 py-2.5 text-[14px] font-medium text-paper hover:bg-seal-green disabled:opacity-50"
       >
         {pendente ? "Convidando…" : "Convidar"}
       </button>
-      {estado.erro && <p className="w-full text-sm text-red-600">{estado.erro}</p>}
+      {estado.erro && <p className="w-full text-[13px] text-seal-red">{estado.erro}</p>}
     </form>
   );
 }

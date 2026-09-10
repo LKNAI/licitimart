@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { pedirRecuperacao } from "./actions";
+import { campoClasse, botaoPrimarioClasse } from "@/components/ui";
 
 const estadoInicial = { erro: "", enviado: false };
 
@@ -16,31 +17,27 @@ export default function RecuperarSenhaPage() {
   );
 
   return (
-    <div className="mx-auto flex min-h-[80vh] max-w-md flex-col justify-center px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Recuperar senha</h1>
-      <p className="mt-1 text-sm text-neutral-500">
+    <div className="mx-auto flex min-h-[calc(100vh-57px)] max-w-md flex-col justify-center px-6">
+      <h1 className="font-display text-3xl font-semibold text-ink">Recuperar senha</h1>
+      <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">
         Informe o e-mail da conta. Se existir, enviaremos um link para definir uma nova senha.
       </p>
 
       {estado.enviado ? (
-        <div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+        <div className="mt-8 rounded-[6px] border border-seal-green bg-seal-green-bg px-4 py-3 text-[14px] text-seal-green">
           Se o e-mail existir, o link de recuperação foi enviado.
         </div>
       ) : (
-        <form action={acao} className="mt-6 space-y-3 rounded-lg border border-neutral-200 bg-white p-5">
-          <input name="email" type="email" required placeholder="e-mail" className="w-full rounded-md border border-neutral-300 p-2 text-sm" />
-          {estado.erro && <p className="text-sm text-red-600">{estado.erro}</p>}
-          <button
-            type="submit"
-            disabled={pendente}
-            className="w-full rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
-          >
+        <form action={acao} className="mt-8 space-y-3 rounded-[6px] border border-line bg-surface p-6">
+          <input name="email" type="email" required placeholder="e-mail" className={campoClasse} />
+          {estado.erro && <p className="text-[13px] text-seal-red">{estado.erro}</p>}
+          <button type="submit" disabled={pendente} className={botaoPrimarioClasse}>
             {pendente ? "Enviando…" : "Enviar link"}
           </button>
         </form>
       )}
 
-      <Link href="/login" className="mt-4 text-center text-sm text-neutral-500 hover:text-neutral-900">
+      <Link href="/login" className="mt-5 text-center text-[13px] text-ink-soft hover:text-ink">
         Voltar para o login
       </Link>
     </div>

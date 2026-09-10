@@ -5,31 +5,30 @@ export default async function ImpugnacoesPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Impugnação Assistida</h1>
-      <p className="mt-1 text-sm text-neutral-500">
-        RF-017 — diferencial de mercado: a mesma lente que detecta restritividade indevida já
-        gera a minuta de contestação. As minutas abaixo são <strong>exemplos gerados pelo motor
-        determinístico real</strong> ({" "}
+      <h1 className="font-display text-3xl font-semibold text-ink">Impugnação Assistida</h1>
+      <p className="mt-2 max-w-[75ch] text-[14.5px] leading-relaxed text-ink-soft">
+        A mesma lente que detecta restritividade indevida já gera a minuta de contestação. As
+        minutas abaixo são geradas pelo motor determinístico real (
         {payload?.geradoPor ?? "spikes/03_impugnacao_assistida"}) sobre editais sintéticos —
-        nenhum dossiê real do PNCP foi analisado ainda (isso exige os agentes AG-01 a AG-05,
-        que dependem de uma chave de LLM não configurada neste ambiente).
+        nenhum dossiê real do PNCP foi analisado ainda, isso exige os agentes de IA, que dependem
+        de uma chave de LLM não configurada neste ambiente.
       </p>
 
       {!disponivel && (
-        <p className="mt-4 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-4 text-sm italic text-neutral-500">
-          Nenhum exemplo carregado — rode <code>python scripts/exportar_minutas_exemplo.py</code>.
+        <p className="mt-6 border border-dashed border-line-strong bg-surface p-4 text-[13.5px] italic text-ink-faint">
+          Nenhum exemplo carregado — rode <code className="font-mono text-[12.5px]">python scripts/exportar_minutas_exemplo.py</code>.
         </p>
       )}
 
-      <div className="mt-6 space-y-8">
+      <div className="mt-8 space-y-10">
         {payload?.exemplos.map((exemplo, i) => (
-          <div key={i} className="rounded-lg border border-neutral-200 bg-white p-5">
-            <div className="text-sm font-medium text-neutral-900">{exemplo.contexto.objeto}</div>
-            <div className="text-xs text-neutral-500">{exemplo.contexto.orgao}</div>
-            <div className="text-xs text-neutral-400">{exemplo.contexto.numero_controle_pncp}</div>
+          <div key={i} className="border-t-2 border-t-seal-red pt-4">
+            <div className="text-[15px] font-medium text-ink">{exemplo.contexto.objeto}</div>
+            <div className="text-[12.5px] text-ink-faint">{exemplo.contexto.orgao}</div>
+            <div className="font-mono text-[11.5px] text-ink-faint">{exemplo.contexto.numero_controle_pncp}</div>
 
-            <div className="mt-3 rounded-md bg-neutral-50 p-3 text-xs text-neutral-600">
-              <span className="font-medium">Trecho sintético do edital: </span>
+            <div className="mt-3 border-l-2 border-line-strong bg-surface p-3 text-[12.5px] leading-relaxed text-ink-soft">
+              <span className="font-medium text-ink">Trecho sintético do edital: </span>
               {exemplo.textoEditalSintetico}
             </div>
 
@@ -37,7 +36,7 @@ export default async function ImpugnacoesPage() {
               {exemplo.achados.map((achado, j) => (
                 <span
                   key={j}
-                  className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 border border-red-200"
+                  className="border-l-[3px] border-seal-red bg-seal-red-bg px-2.5 py-1 text-[12px] font-medium text-seal-red"
                   title={achado.fundamentacao_candidata}
                 >
                   {achado.explicacao}
@@ -46,10 +45,10 @@ export default async function ImpugnacoesPage() {
             </div>
 
             <details className="mt-4">
-              <summary className="cursor-pointer text-sm font-medium text-neutral-700 hover:text-neutral-900">
+              <summary className="cursor-pointer text-[13.5px] font-medium text-ink-soft hover:text-ink">
                 Ver minuta gerada (rascunho)
               </summary>
-              <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-amber-200 bg-amber-50 p-4 font-mono text-xs text-neutral-800">
+              <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap border-l-2 border-seal-amber bg-surface p-4 font-mono text-[12.5px] leading-relaxed text-ink">
                 {exemplo.minutaMarkdown}
               </pre>
             </details>

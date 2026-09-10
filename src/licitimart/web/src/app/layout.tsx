@@ -1,24 +1,44 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Source_Serif_4, Public_Sans, IBM_Plex_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { criarClienteSupabaseServer } from "@/lib/supabase/server";
 import { sair } from "@/app/login/actions";
+import NavBar from "@/components/NavBar";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const sourceSerif = Source_Serif_4({
+  variable: "--font-source-serif",
   subsets: ["latin"],
+  weight: ["500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const publicSans = Public_Sans({
+  variable: "--font-public-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
+  subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
   title: "Licitimart",
-  description: "Inteligência de licitações — Fase D, autenticação real",
+  description: "Inteligência de licitações públicas — triagem e verificação de editais reais do PNCP",
 };
+
+const ROTAS: { href: string; rotulo: string }[] = [
+  { href: "/busca", rotulo: "Busca" },
+  { href: "/dossies", rotulo: "Dossiês" },
+  { href: "/pipeline", rotulo: "Pipeline" },
+  { href: "/impugnacoes", rotulo: "Impugnações" },
+  { href: "/retificacoes", rotulo: "Retificações" },
+  { href: "/metricas", rotulo: "Métricas" },
+  { href: "/tenant", rotulo: "Tenant" },
+  { href: "/tenant/membros", rotulo: "Membros" },
+];
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const supabase = await criarClienteSupabaseServer();
@@ -29,51 +49,28 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${sourceSerif.variable} ${publicSans.variable} ${plexMono.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col bg-neutral-50 text-neutral-900">
-        <header className="border-b border-neutral-200 bg-white">
-          <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-3">
-            <Link href="/" className="font-semibold tracking-tight">
-              Licitimart
-            </Link>
+      <body className="flex min-h-full flex-col bg-paper font-sans text-[15px] text-ink antialiased">
+        <header className="border-b border-line bg-surface">
+          <div className="mx-auto max-w-6xl px-6 py-3.5">
+            <div className="flex items-center justify-between gap-4">
+              <Link href="/" className="font-display text-[19px] font-semibold tracking-tight text-ink">
+                Licitimart
+              </Link>
+              {user && (
+                <form action={sair} className="flex items-center gap-3">
+                  <span className="hidden font-mono text-xs text-ink-faint sm:inline">{user.email}</span>
+                  <button type="submit" className="text-[13px] text-ink-soft hover:text-ink">
+                    Sair
+                  </button>
+                </form>
+              )}
+            </div>
             {user && (
-              <nav className="flex gap-4 text-sm text-neutral-600">
-                <Link href="/busca" className="hover:text-neutral-900">
-                  Busca
-                </Link>
-                <Link href="/dossies" className="hover:text-neutral-900">
-                  Dossiês
-                </Link>
-                <Link href="/pipeline" className="hover:text-neutral-900">
-                  Pipeline
-                </Link>
-                <Link href="/impugnacoes" className="hover:text-neutral-900">
-                  Impugnações
-                </Link>
-                <Link href="/retificacoes" className="hover:text-neutral-900">
-                  Retificações
-                </Link>
-                <Link href="/metricas" className="hover:text-neutral-900">
-                  Métricas
-                </Link>
-                <Link href="/tenant" className="hover:text-neutral-900">
-                  Tenant
-                </Link>
-                <Link href="/tenant/membros" className="hover:text-neutral-900">
-                  Membros
-                </Link>
-              </nav>
-            )}
-            <span className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-              Fase E — RBAC + recuperação de senha
-            </span>
-            {user && (
-              <form action={sair}>
-                <button type="submit" className="text-sm text-neutral-500 hover:text-neutral-900">
-                  Sair ({user.email})
-                </button>
-              </form>
+              <div className="-mx-6 mt-2 overflow-x-auto px-6">
+                <NavBar rotas={ROTAS} />
+              </div>
             )}
           </div>
         </header>

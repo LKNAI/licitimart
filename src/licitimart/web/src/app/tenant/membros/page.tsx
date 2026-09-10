@@ -25,8 +25,8 @@ export default async function MembrosPage() {
   if (!souAdmin) {
     return (
       <div className="mx-auto max-w-2xl px-6 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight">Membros do Tenant</h1>
-        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <h1 className="font-display text-3xl font-semibold text-ink">Membros do Tenant</h1>
+        <div className="mt-4 border-l-2 border-seal-amber bg-seal-amber-bg px-4 py-3 text-[13.5px] text-seal-amber">
           Só administradores do tenant gerenciam membros. Seu papel atual é{" "}
           <strong>{minhaMembresia.papel}</strong>.
         </div>
@@ -40,38 +40,41 @@ export default async function MembrosPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Membros do Tenant</h1>
-      <p className="mt-1 text-sm text-neutral-500">
-        RNF-007 — gestão de acesso por papel (analista, gestor_comercial, juridico_compliance, admin_tenant).
+      <h1 className="font-display text-3xl font-semibold text-ink">Membros do Tenant</h1>
+      <p className="mt-2 text-[14.5px] leading-relaxed text-ink-soft">
+        Gestão de acesso por papel — analista, gestor comercial, jurídico/compliance ou
+        administrador.
       </p>
 
-      {error && <p className="mt-4 text-sm text-red-600">{error.message}</p>}
+      {error && <p className="mt-4 text-[13px] text-seal-red">{error.message}</p>}
 
-      <table className="mt-6 w-full text-sm">
-        <thead>
-          <tr className="border-b border-neutral-200 text-left text-neutral-500">
-            <th className="py-2">E-mail</th>
-            <th className="py-2">Papel</th>
-          </tr>
-        </thead>
-        <tbody>
-          {membros?.map((m: { user_id: string; email: string; papel: string }) => (
-            <tr key={m.user_id} className="border-b border-neutral-100">
-              <td className="py-2">
-                {m.email} {m.user_id === user.id && <span className="text-xs text-neutral-400">(você)</span>}
-              </td>
-              <td className="py-2">
-                <PapelSelect
-                  tenantId={tenantId}
-                  userId={m.user_id}
-                  papelAtual={m.papel}
-                  ehVoceMesmo={m.user_id === user.id}
-                />
-              </td>
+      <div className="mt-8 overflow-x-auto border-y border-line">
+        <table className="w-full text-left text-[13.5px]">
+          <thead>
+            <tr className="border-b border-line text-ink-faint">
+              <th className="py-2.5 font-medium">E-mail</th>
+              <th className="py-2.5 font-medium">Papel</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {membros?.map((m: { user_id: string; email: string; papel: string }) => (
+              <tr key={m.user_id}>
+                <td className="py-2.5 text-ink">
+                  {m.email} {m.user_id === user.id && <span className="text-[12px] text-ink-faint">(você)</span>}
+                </td>
+                <td className="py-2.5">
+                  <PapelSelect
+                    tenantId={tenantId}
+                    userId={m.user_id}
+                    papelAtual={m.papel}
+                    ehVoceMesmo={m.user_id === user.id}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <ConvidarForm tenantId={tenantId} />
     </div>

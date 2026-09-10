@@ -1,33 +1,35 @@
 import Link from "next/link";
+import { SeloCarimbo } from "@/components/Selo";
 
 export default function Home() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight">Licitimart</h1>
-      <p className="mt-3 text-neutral-600">
-        Triagem, análise técnica/jurídica e recomendação Go/No-Go sobre contratações
-        públicas — com citação rastreável até a página exata do documento, nunca uma
-        nota sem prova.
+      <h1 className="font-display text-4xl font-semibold leading-tight text-ink">Licitimart</h1>
+      <p className="mt-4 max-w-[60ch] text-[15px] leading-relaxed text-ink-soft">
+        Triagem, análise técnica/jurídica e recomendação Go/No-Go sobre contratações públicas do
+        PNCP — com citação rastreável até a página exata do documento, nunca uma nota sem prova.
       </p>
 
-      <div className="mt-8 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        Este é o esqueleto da v1. Não há projeto Supabase configurado neste ambiente —
-        todo dado exibido em <code>/dossies</code> e <code>/pipeline</code> é mock. Ver{" "}
-        <code>plan.md</code> para o que falta.
+      <div className="mt-10 flex items-center gap-5 border-y border-line py-6">
+        <SeloCarimbo tom="green" titulo="Confirmado" subtitulo="fontes concordam" />
+        <p className="max-w-[42ch] text-[13.5px] leading-relaxed text-ink-faint">
+          Todo dado exibido carrega um selo de procedência — real do PNCP ou ilustrativo, sempre
+          rotulado, nunca misturado silenciosamente.
+        </p>
       </div>
 
       <div className="mt-8 flex gap-3">
         <Link
           href="/dossies"
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+          className="rounded-[4px] bg-ink px-4 py-2.5 text-[14px] font-medium text-paper hover:bg-seal-green"
         >
-          Ver dossiês (mock)
+          Ver dossiês
         </Link>
         <Link
           href="/pipeline"
-          className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium hover:bg-neutral-100"
+          className="rounded-[4px] border border-line-strong px-4 py-2.5 text-[14px] font-medium text-ink hover:bg-surface"
         >
-          Ver pipeline Go/No-Go (mock)
+          Ver pipeline Go/No-Go
         </Link>
       </div>
     </div>

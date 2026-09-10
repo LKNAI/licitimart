@@ -6,25 +6,30 @@ import {
   ROTULO_VEREDITO,
 } from "@/lib/mock/dossies";
 import { carregarDossiesSupabase } from "@/lib/data/dossiesSupabase";
+import { SeloCompacto, type Tom } from "@/components/Selo";
 
-const CORES_VEREDITO: Record<string, string> = {
-  go: "bg-emerald-100 text-emerald-800",
-  no_go: "bg-red-100 text-red-800",
-  revisao_humana: "bg-amber-100 text-amber-800",
+const TOM_VEREDITO: Record<string, Tom> = {
+  go: "green",
+  no_go: "red",
+  revisao_humana: "amber",
 };
 
-const CORES_CONFIABILIDADE: Record<string, string> = {
-  confirmado: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  fonte_unica: "bg-neutral-50 text-neutral-600 border-neutral-200",
-  divergente: "bg-red-50 text-red-700 border-red-200",
+const TOM_CONFIABILIDADE: Record<string, Tom> = {
+  confirmado: "green",
+  fonte_unica: "amber",
+  divergente: "red",
 };
 
-const CORES_ORIGEM: Record<string, string> = {
-  pncp_real: "bg-blue-50 text-blue-700 border-blue-200",
-  mock_ilustrativo: "bg-neutral-50 text-neutral-500 border-neutral-200 border-dashed",
+const TOM_ORIGEM: Record<string, Tom> = {
+  pncp_real: "blue",
+  mock_ilustrativo: "neutral",
 };
 
 const POR_PAGINA = 25;
+
+function formatarMoeda(v: number) {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
 
 export default async function DossiesPage({
   searchParams,
@@ -42,65 +47,57 @@ export default async function DossiesPage({
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Dossiês</h1>
-      <p className="mt-1 text-sm text-neutral-500">
-        RF-006 — {todos.length} dossiê(s):{" "}
+      <h1 className="font-display text-3xl font-semibold text-ink">Dossiês</h1>
+      <p className="mt-2 max-w-[75ch] text-[14px] leading-relaxed text-ink-soft">
+        {todos.length} dossiê(s).{" "}
         {metadado.disponivel ? (
           <>
-            {ROTULO_ORIGEM.pncp_real} vêm direto da tabela <code>contratacoes</code> no Supabase
-            ({metadado.total} linhas — consulta ao vivo, não mais snapshot JSON);{" "}
+            {ROTULO_ORIGEM.pncp_real} vêm direto da tabela <code className="font-mono text-[13px]">contratacoes</code> no
+            Supabase ({metadado.total} linhas, consulta ao vivo);{" "}
           </>
         ) : (
-          <>Não foi possível consultar o Supabase agora (ver <code>src/lib/data/dossiesSupabase.ts</code>). </>
+          <>Não foi possível consultar o Supabase agora. </>
         )}
-        {ROTULO_ORIGEM.mock_ilustrativo} são exemplos de como a tela fica quando existir análise
-        de IA (ainda sem chave de LLM configurada). Nenhum item real tem veredito além de
-        &quot;Revisão Humana&quot; — zero análise foi feita sobre eles ainda (RNF-012).
+        {ROTULO_ORIGEM.mock_ilustrativo} são exemplos de como a tela fica com análise de IA (ainda
+        sem chave de LLM configurada) — nenhum item real tem veredito além de Revisão Humana até
+        que um humano decida.
       </p>
 
-      <div className="mt-6 overflow-hidden rounded-lg border border-neutral-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-neutral-50 text-neutral-500">
-            <tr>
-              <th className="px-4 py-3 font-medium">Órgão / Objeto</th>
-              <th className="px-4 py-3 font-medium">Modalidade</th>
-              <th className="px-4 py-3 font-medium">Valor estimado</th>
-              <th className="px-4 py-3 font-medium">Veredito</th>
-              <th className="px-4 py-3 font-medium">Confiabilidade</th>
-              <th className="px-4 py-3 font-medium">Origem</th>
+      <div className="mt-8 overflow-x-auto border-y border-line">
+        <table className="w-full min-w-[840px] text-left text-[13.5px]">
+          <thead>
+            <tr className="border-b border-line text-ink-faint">
+              <th className="py-2.5 pr-4 font-medium">Órgão / Objeto</th>
+              <th className="py-2.5 pr-4 font-medium">Modalidade</th>
+              <th className="py-2.5 pr-4 text-right font-medium">Valor estimado</th>
+              <th className="py-2.5 pr-4 font-medium">Veredito</th>
+              <th className="py-2.5 pr-4 font-medium">Confiabilidade</th>
+              <th className="py-2.5 font-medium">Origem</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-line">
             {visiveis.map((d) => (
-              <tr key={d.id} className="hover:bg-neutral-50">
-                <td className="px-4 py-3">
-                  <Link href={`/dossies/${d.id}`} className="font-medium text-neutral-900 hover:underline">
+              <tr key={d.id} className="align-top hover:bg-surface">
+                <td className="max-w-sm py-3 pr-4">
+                  <Link href={`/dossies/${d.id}`} className="font-medium text-ink hover:text-seal-green">
                     {d.objeto}
                   </Link>
-                  <div className="text-xs text-neutral-500">{d.orgao}</div>
+                  <div className="mt-0.5 text-[12.5px] text-ink-faint">{d.orgao}</div>
                 </td>
-                <td className="px-4 py-3 text-neutral-600">{d.modalidade}</td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {d.valorEstimado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                <td className="py-3 pr-4 text-ink-soft">{d.modalidade}</td>
+                <td className="py-3 pr-4 text-right font-mono text-[13px] text-ink">
+                  {formatarMoeda(d.valorEstimado)}
                 </td>
-                <td className="px-4 py-3">
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${CORES_VEREDITO[d.veredito]}`}>
-                    {ROTULO_VEREDITO[d.veredito]}
-                  </span>
+                <td className="py-3 pr-4">
+                  <SeloCompacto tom={TOM_VEREDITO[d.veredito]}>{ROTULO_VEREDITO[d.veredito]}</SeloCompacto>
                 </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-xs font-medium ${CORES_CONFIABILIDADE[d.confiabilidade]}`}
-                  >
+                <td className="py-3 pr-4">
+                  <SeloCompacto tom={TOM_CONFIABILIDADE[d.confiabilidade]}>
                     {ROTULO_CONFIABILIDADE[d.confiabilidade]}
-                  </span>
+                  </SeloCompacto>
                 </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-xs font-medium ${CORES_ORIGEM[d.origem]}`}
-                  >
-                    {ROTULO_ORIGEM[d.origem]}
-                  </span>
+                <td className="py-3">
+                  <SeloCompacto tom={TOM_ORIGEM[d.origem]}>{ROTULO_ORIGEM[d.origem]}</SeloCompacto>
                 </td>
               </tr>
             ))}
@@ -108,15 +105,15 @@ export default async function DossiesPage({
         </table>
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-sm text-neutral-500">
-        <span>
-          Página {pagina} de {totalPaginas}
+      <div className="mt-4 flex items-center justify-between text-[13px] text-ink-soft">
+        <span className="font-mono">
+          página {pagina} de {totalPaginas}
         </span>
         <div className="flex gap-2">
           {pagina > 1 && (
             <Link
               href={`/dossies?pagina=${pagina - 1}`}
-              className="rounded-md border border-neutral-300 px-3 py-1 hover:bg-neutral-100"
+              className="rounded-[4px] border border-line-strong px-3 py-1.5 hover:bg-surface"
             >
               Anterior
             </Link>
@@ -124,7 +121,7 @@ export default async function DossiesPage({
           {pagina < totalPaginas && (
             <Link
               href={`/dossies?pagina=${pagina + 1}`}
-              className="rounded-md border border-neutral-300 px-3 py-1 hover:bg-neutral-100"
+              className="rounded-[4px] border border-line-strong px-3 py-1.5 hover:bg-surface"
             >
               Próxima
             </Link>

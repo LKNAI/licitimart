@@ -33,70 +33,71 @@ export default async function RetificacoesPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight">Diff de Retificação</h1>
-      <p className="mt-1 text-sm text-neutral-500">
-        RF-018 — diferencial de mercado: retificação de edital tratada como evento de primeira
-        classe, com registro campo a campo, não como republicação silenciosa. Dado real: o
-        coletor compara cada coleta contra o estado anterior de cada contratação antes de
-        sobrescrever (<code>src/licitimart/ingestao/supabase_store.py</code>).
+      <h1 className="font-display text-3xl font-semibold text-ink">Diff de Retificação</h1>
+      <p className="mt-2 max-w-[75ch] text-[14.5px] leading-relaxed text-ink-soft">
+        Retificação de edital tratada como evento de primeira classe, com registro campo a campo,
+        não como republicação silenciosa. O coletor compara cada coleta contra o estado anterior
+        de cada contratação antes de sobrescrever.
       </p>
-      <div className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs text-neutral-500">
+      <div className="mt-4 border-l-2 border-line-strong bg-surface px-4 py-3 text-[12.5px] leading-relaxed text-ink-faint">
         Escopo desta fase: diff sobre os campos estruturados já coletados (objeto, modalidade,
-        valor, data, órgão) — não sobre o texto completo do edital em PDF, que depende de RF-002
-        (OCR/extração), ainda não construído. Alerta proativo (e-mail/push) fica para depois.
+        valor, data, órgão) — não sobre o texto completo do edital em PDF. Alerta proativo
+        (e-mail/push) fica para depois.
       </div>
 
-      {error && <p className="mt-4 text-sm text-red-600">{error.message}</p>}
+      {error && <p className="mt-4 text-[13px] text-seal-red">{error.message}</p>}
 
       {retificacoes.length === 0 ? (
-        <div className="mt-6 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-6 text-sm italic text-neutral-500">
+        <div className="mt-8 border border-dashed border-line-strong bg-surface p-6 text-[13.5px] italic text-ink-faint">
           Nenhuma retificação detectada ainda — o coletor só grava uma linha aqui quando um campo
           muda entre duas coletas da mesma contratação. Com uma única rodada de coleta até agora,
           isso é esperado: é &quot;ainda não aconteceu&quot;, não &quot;não funciona&quot;.
         </div>
       ) : (
-        <div className="mt-6 space-y-4">
+        <div className="mt-8 divide-y divide-line border-y border-line">
           {retificacoes.map((r) => (
-            <div key={r.id} className="rounded-lg border border-neutral-200 bg-white p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500">
+            <div key={r.id} className="py-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <Link
                   href={r.contratacoes ? `/dossies/real-${r.contratacoes.id}` : "/dossies"}
-                  className="font-medium text-neutral-700 hover:underline"
+                  className="text-[14px] font-medium text-ink hover:text-seal-green"
                 >
                   {r.contratacoes?.objeto ?? "(contratação removida)"}
                 </Link>
-                <span>{new Date(r.detectado_em).toLocaleString("pt-BR")}</span>
+                <span className="font-mono text-[12px] text-ink-faint">
+                  {new Date(r.detectado_em).toLocaleString("pt-BR")}
+                </span>
               </div>
-              <div className="mt-1 text-xs text-neutral-400">{r.contratacoes?.orgao}</div>
+              <div className="mt-0.5 text-[12.5px] text-ink-faint">{r.contratacoes?.orgao}</div>
 
-              <div className="mt-3 text-sm font-semibold text-amber-700">
+              <div className="mt-3 text-[12.5px] font-medium text-seal-amber">
                 Campo alterado: {ROTULO_CAMPO[r.campo] ?? r.campo}
               </div>
 
               {r.campo === "objeto" ? (
-                <div className="mt-2 rounded-md bg-neutral-50 p-3 font-mono text-sm leading-relaxed">
+                <div className="mt-2 bg-surface p-3 font-mono text-[13px] leading-relaxed">
                   {diffPalavras(r.valor_anterior ?? "", r.valor_novo ?? "").map((trecho, i) => {
                     if (trecho.tipo === "igual") return <span key={i}>{trecho.texto}</span>;
                     if (trecho.tipo === "removido")
                       return (
-                        <span key={i} className="bg-red-100 text-red-700 line-through">
+                        <span key={i} className="bg-seal-red-bg text-seal-red line-through">
                           {trecho.texto}
                         </span>
                       );
                     return (
-                      <span key={i} className="bg-emerald-100 text-emerald-800">
+                      <span key={i} className="bg-seal-green-bg text-seal-green">
                         {trecho.texto}
                       </span>
                     );
                   })}
                 </div>
               ) : (
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                  <span className="rounded-md bg-red-100 px-2 py-1 text-red-700 line-through">
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[13.5px]">
+                  <span className="bg-seal-red-bg px-2 py-1 text-seal-red line-through">
                     {r.valor_anterior ?? "—"}
                   </span>
-                  <span className="text-neutral-400">→</span>
-                  <span className="rounded-md bg-emerald-100 px-2 py-1 text-emerald-800">
+                  <span className="text-ink-faint">→</span>
+                  <span className="bg-seal-green-bg px-2 py-1 text-seal-green">
                     {r.valor_novo ?? "—"}
                   </span>
                 </div>

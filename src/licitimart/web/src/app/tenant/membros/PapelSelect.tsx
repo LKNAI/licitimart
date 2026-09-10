@@ -38,7 +38,7 @@ export default function PapelSelect({
             }
           });
         }}
-        className="rounded-md border border-neutral-300 p-1.5 text-sm"
+        className="rounded-[4px] border border-line-strong bg-surface-raised p-1.5 text-[13px] text-ink"
       >
         {PAPEIS.map((p) => (
           <option key={p} value={p}>
@@ -56,11 +56,11 @@ export default function PapelSelect({
             if (resultado?.erro) setErro(resultado.erro);
           });
         }}
-        className="text-xs text-red-600 hover:underline disabled:opacity-50"
+        className="text-[12.5px] text-seal-red hover:underline disabled:opacity-50"
       >
         remover
       </button>
-      {erro && <span className="text-xs text-red-600">{erro}</span>}
+      {erro && <span className="text-[12.5px] text-seal-red">{erro}</span>}
     </div>
   );
 }
