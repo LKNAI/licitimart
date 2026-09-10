@@ -39,6 +39,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </Link>
             {user && (
               <nav className="flex gap-4 text-sm text-neutral-600">
+                <Link href="/busca" className="hover:text-neutral-900">
+                  Busca
+                </Link>
                 <Link href="/dossies" className="hover:text-neutral-900">
                   Dossiês
                 </Link>
