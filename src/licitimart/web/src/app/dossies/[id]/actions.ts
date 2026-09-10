@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { criarClienteSupabaseServer } from "@/lib/supabase/server";
 import type { Veredito } from "@/lib/mock/dossies";
 import { baixarArquivo, buscarArquivos, buscarItens, respiro } from "@/lib/pncp/client";
-import { extrairTexto } from "@/lib/pncp/extracao";
+import { extrairTexto, fatiarPorPagina } from "@/lib/pncp/extracao";
 import { detectar } from "@/lib/impugnacao/detector";
 import { gerarMinuta } from "@/lib/impugnacao/minuta";
+import { embutirTexto, formatarParaPgvector } from "@/lib/embedding";
 
 export async function definirVeredito(contratacaoId: number, veredito: Veredito) {
   const supabase = await criarClienteSupabaseServer();
@@ -91,21 +92,44 @@ export async function buscarEnriquecimento(contratacaoId: number, numeroControle
           .upload(caminho, Buffer.from(conteudo), { upsert: true, contentType: "application/octet-stream" });
         if (erroUpload) return { erro: erroUpload.message };
 
-        const { error: erroDocumento } = await supabase.from("documentos_contratacao").upsert(
-          {
-            contratacao_id: contratacaoId,
-            sequencial_documento: edital.sequencialDocumento,
-            titulo: edital.titulo,
-            tipo_documento: edital.tipoDocumentoNome ?? null,
-            storage_path: caminho,
-            texto_extraido: texto || null,
-            status_extracao: status,
-            paginas: paginas || null,
-            paginas_offsets: offsets.length ? offsets : null,
-          },
-          { onConflict: "contratacao_id,sequencial_documento" }
-        );
+        const { data: documentoSalvo, error: erroDocumento } = await supabase
+          .from("documentos_contratacao")
+          .upsert(
+            {
+              contratacao_id: contratacaoId,
+              sequencial_documento: edital.sequencialDocumento,
+              titulo: edital.titulo,
+              tipo_documento: edital.tipoDocumentoNome ?? null,
+              storage_path: caminho,
+              texto_extraido: texto || null,
+              status_extracao: status,
+              paginas: paginas || null,
+              paginas_offsets: offsets.length ? offsets : null,
+            },
+            { onConflict: "contratacao_id,sequencial_documento" }
+          )
+          .select("id")
+          .single();
         if (erroDocumento) return { erro: erroDocumento.message };
+
+        // Fase S: indexa cada página pra busca semântica (RF-005),
+        // reaproveitando o mesmo modelo de embedding da busca de
+        // contratações -- não bloqueia o resto do fluxo se falhar.
+        if (status === "extraido_nativo" && documentoSalvo) {
+          const paginasTexto = fatiarPorPagina(texto, offsets);
+          const linhas = await Promise.all(
+            paginasTexto.map(async (p) => ({
+              documento_id: documentoSalvo.id,
+              contratacao_id: contratacaoId,
+              pagina: p.pagina,
+              texto: p.texto,
+              embedding: formatarParaPgvector(await embutirTexto(p.texto)),
+            }))
+          );
+          if (linhas.length > 0) {
+            await supabase.from("documento_paginas").upsert(linhas, { onConflict: "documento_id,pagina" });
+          }
+        }
       }
     }
   }
@@ -171,4 +195,35 @@ export async function detectarRestritividade(
 
   revalidatePath("/impugnacoes");
   return { erro: "", achadosCount: achados.length };
+}
+
+// Fase T: resultado real da disputa (RF-014) -- só faz sentido depois
+// de "Go" (decidiu disputar); sem isso, /metricas não tem como calcular
+// taxa de vitória, só contagem de decisão.
+export async function registrarResultadoDisputa(contratacaoId: number, resultado: "aguardando" | "ganhou" | "perdeu") {
+  const supabase = await criarClienteSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { erro: "Sessão expirada." };
+
+  const { data: membresia } = await supabase
+    .from("tenant_membros")
+    .select("tenant_id")
+    .eq("user_id", user.id)
+    .limit(1)
+    .single();
+  if (!membresia) return { erro: "Usuário sem tenant." };
+
+  const { error } = await supabase
+    .from("analises")
+    .update({ resultado })
+    .eq("tenant_id", membresia.tenant_id)
+    .eq("contratacao_id", contratacaoId)
+    .eq("veredito", "go");
+  if (error) return { erro: error.message };
+
+  revalidatePath("/metricas");
+  revalidatePath(`/dossies/real-${contratacaoId}`);
+  return { erro: "" };
 }

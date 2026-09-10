@@ -28,6 +28,7 @@ export interface ItemLicitacao {
 }
 
 export type Origem = "mock_ilustrativo" | "pncp_real";
+export type ResultadoDisputa = "aguardando" | "ganhou" | "perdeu";
 
 export interface Dossie {
   id: string;
@@ -38,6 +39,10 @@ export interface Dossie {
   valorEstimado: number;
   dataPublicacao: string;
   veredito: Veredito;
+  // Fase T (RF-014): só relevante quando veredito="go". Undefined nas
+  // telas de lista (não buscado, não é exibido lá); sempre presente no
+  // detalhe (buscarDossiePorId).
+  resultado?: ResultadoDisputa;
   confiabilidade: Confiabilidade;
   itens: ItemLicitacao[];
   achados: Achado[];

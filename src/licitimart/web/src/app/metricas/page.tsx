@@ -70,6 +70,41 @@ export default async function MetricasPage() {
         })}
       </div>
 
+      <h2 className="mt-10 font-display text-lg font-semibold text-ink">Resultado real da disputa</h2>
+      <p className="text-[12.5px] text-ink-faint">
+        Só entre os marcados &quot;Go&quot; — preenchido manualmente pelo usuário depois do
+        pregão, não há fonte automática de resultado. RF-014 (incremento de participação) depende
+        disso, não só da contagem de decisão acima.
+      </p>
+      {metricas.porVeredito.go === 0 ? (
+        <p className="mt-3 text-[13.5px] italic text-ink-faint">
+          Nenhuma contratação real marcada &quot;Go&quot; ainda.
+        </p>
+      ) : (
+        <div className="mt-3 grid grid-cols-3 divide-x divide-line border border-line">
+          <div className="p-4">
+            <div className="text-[12px] text-seal-green">Ganhou</div>
+            <div className="mt-1 font-display text-[22px] font-semibold text-seal-green">{metricas.ganhouTotal}</div>
+          </div>
+          <div className="p-4">
+            <div className="text-[12px] text-seal-red">Perdeu</div>
+            <div className="mt-1 font-display text-[22px] font-semibold text-seal-red">{metricas.perdeuTotal}</div>
+          </div>
+          <div className="p-4">
+            <div className="text-[12px] text-ink-faint">Aguardando</div>
+            <div className="mt-1 font-display text-[22px] font-semibold text-ink-soft">{metricas.aguardandoTotal}</div>
+          </div>
+        </div>
+      )}
+      {(metricas.ganhouTotal + metricas.perdeuTotal) > 0 && (
+        <p className="mt-2 text-[12.5px] text-ink-soft">
+          Taxa de vitória (entre resultados já conhecidos):{" "}
+          <span className="font-mono font-medium text-ink">
+            {Math.round((metricas.ganhouTotal / (metricas.ganhouTotal + metricas.perdeuTotal)) * 100)}%
+          </span>
+        </p>
+      )}
+
       <h2 className="mt-10 font-display text-lg font-semibold text-ink">Procedência do dado real</h2>
       {metricas.disponivel ? (
         <ul className="mt-2 space-y-1 text-[13.5px] text-ink-soft">

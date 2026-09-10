@@ -2,10 +2,14 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { buscar, type ResultadoBusca } from "./actions";
+import { buscar, type ResultadoBusca, type ResultadoPagina } from "./actions";
 import { campoClasse } from "@/components/ui";
 
-const estadoInicial: { erro: string; resultados: ResultadoBusca[] } = { erro: "", resultados: [] };
+const estadoInicial: { erro: string; resultados: ResultadoBusca[]; paginas: ResultadoPagina[] } = {
+  erro: "",
+  resultados: [],
+  paginas: [],
+};
 
 export default function BuscaPage() {
   const [estado, acao, pendente] = useActionState(
@@ -18,8 +22,8 @@ export default function BuscaPage() {
       <h1 className="font-display text-3xl font-semibold text-ink">Prospecção Semântica</h1>
       <p className="mt-2 max-w-[70ch] text-[14.5px] leading-relaxed text-ink-soft">
         Busca híbrida: combina correspondência de palavra-chave com similaridade de significado
-        (embedding local, sem chave de LLM). Escopo desta fase: busca sobre o objeto da
-        contratação — o texto completo do edital ainda não entra na busca.
+        (embedding local, sem chave de LLM) — sobre o objeto da contratação e sobre o texto do
+        edital já extraído (quando disponível).
       </p>
 
       <form action={acao} className="mt-8 flex gap-2">
@@ -59,7 +63,34 @@ export default function BuscaPage() {
         </div>
       )}
 
-      {!pendente && estado.resultados.length === 0 && !estado.erro && (
+      {estado.paginas.length > 0 && (
+        <div className="mt-8">
+          <h2 className="font-display text-lg font-semibold text-ink">Trechos de editais</h2>
+          <p className="mt-1 text-[12.5px] text-ink-faint">
+            Busca dentro do texto real extraído do documento — só cobre contratações já enriquecidas.
+          </p>
+          <div className="mt-3 divide-y divide-line border-y border-line">
+            {estado.paginas.map((p, i) => (
+              <Link
+                key={i}
+                href={`/dossies/real-${p.contratacaoId}/documento/${p.documentoId}`}
+                className="block py-3.5 transition-colors hover:bg-surface"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="text-[13.5px] font-medium text-ink">{p.objeto ?? "(objeto não informado)"}</div>
+                  <span className="shrink-0 font-mono text-[11.5px] text-ink-faint">
+                    {p.pagina !== null ? `página ${p.pagina}` : "sem paginação"}
+                  </span>
+                </div>
+                <div className="mt-1 text-[12.5px] text-ink-faint">{p.orgao}</div>
+                <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-soft">{p.trecho}…</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!pendente && estado.resultados.length === 0 && estado.paginas.length === 0 && !estado.erro && (
         <p className="mt-8 text-[13.5px] italic text-ink-faint">Nenhuma busca feita ainda.</p>
       )}
     </div>

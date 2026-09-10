@@ -51,7 +51,8 @@ interface LinhaContratacao {
 function mapearLinhaParaDossie(
   row: LinhaContratacao,
   veredito: Veredito,
-  itens: ItemLicitacao[]
+  itens: ItemLicitacao[],
+  resultado?: Dossie["resultado"]
 ): Dossie {
   return {
     id: `real-${row.id}`,
@@ -62,6 +63,7 @@ function mapearLinhaParaDossie(
     valorEstimado: row.valor_estimado ?? 0,
     dataPublicacao: row.data_publicacao ?? new Date().toISOString(),
     veredito,
+    resultado,
     confiabilidade: (row.confiabilidade as Dossie["confiabilidade"]) ?? "fonte_unica",
     itens,
     achados: [],
@@ -154,18 +156,22 @@ export async function buscarDossiePorId(idNumerico: number): Promise<Dossie | un
 
   const tenantId = await buscarTenantIdDoUsuario(supabase);
   let veredito: Veredito = "revisao_humana";
+  let resultado: Dossie["resultado"] = "aguardando";
   if (tenantId !== null) {
     const { data: analise } = await supabase
       .from("analises")
-      .select("veredito")
+      .select("veredito, resultado")
       .eq("tenant_id", tenantId)
       .eq("contratacao_id", idNumerico)
       .maybeSingle();
-    if (analise) veredito = analise.veredito as Veredito;
+    if (analise) {
+      veredito = analise.veredito as Veredito;
+      resultado = (analise.resultado as Dossie["resultado"]) ?? "aguardando";
+    }
   }
 
   const itensPorContratacao = await buscarItensDeIds(supabase, [idNumerico]);
-  return mapearLinhaParaDossie(row, veredito, itensPorContratacao.get(idNumerico) ?? []);
+  return mapearLinhaParaDossie(row, veredito, itensPorContratacao.get(idNumerico) ?? [], resultado);
 }
 
 export interface Metricas {
@@ -174,6 +180,10 @@ export interface Metricas {
   valorTotal: number;
   maiorValor: number;
   porVeredito: Record<Veredito, number>;
+  // Fase T (RF-014) -- resultado real da disputa, só entre os "go".
+  ganhouTotal: number;
+  perdeuTotal: number;
+  aguardandoTotal: number;
 }
 
 // RPC metricas_contratacoes (Fase O) -- soma/conta no Postgres, não num
@@ -185,6 +195,9 @@ export async function buscarMetricas(): Promise<Metricas> {
     valorTotal: 0,
     maiorValor: 0,
     porVeredito: { go: 0, revisao_humana: 0, no_go: 0 },
+    ganhouTotal: 0,
+    perdeuTotal: 0,
+    aguardandoTotal: 0,
   };
   const supabase = await criarClienteSupabaseServer();
   const tenantId = await buscarTenantIdDoUsuario(supabase);
@@ -197,6 +210,9 @@ export async function buscarMetricas(): Promise<Metricas> {
     go_total: number;
     revisao_total: number;
     no_go_total: number;
+    ganhou_total: number;
+    perdeu_total: number;
+    aguardando_total: number;
   }
 
   const { data, error } = await supabase
@@ -209,6 +225,9 @@ export async function buscarMetricas(): Promise<Metricas> {
     total: Number(data.total),
     valorTotal: Number(data.valor_total),
     maiorValor: Number(data.maior_valor),
+    ganhouTotal: Number(data.ganhou_total),
+    perdeuTotal: Number(data.perdeu_total),
+    aguardandoTotal: Number(data.aguardando_total),
     porVeredito: {
       go: Number(data.go_total),
       revisao_humana: Number(data.revisao_total),
@@ -402,5 +421,34 @@ export async function buscarItensComparaveisSemanticos(
     descricao: row.descricao,
     valorUnitarioEstimado: row.valor_unitario_estimado ?? 0,
     distancia: row.distancia,
+  }));
+}
+
+export interface PaginaEncontrada {
+  documentoId: number;
+  contratacaoId: number;
+  pagina: number | null;
+  trecho: string;
+  score: number;
+}
+
+// Fase S -- RPC buscar_paginas_documento: busca híbrida (full-text +
+// vetor, mesmo RRF de buscar_contratacoes_hibrida) sobre o texto do
+// edital, não só o objeto da contratação.
+export async function buscarPaginasSemelhantes(texto: string, embeddingPgvector: string): Promise<PaginaEncontrada[]> {
+  const supabase = await criarClienteSupabaseServer();
+  const { data, error } = await supabase.rpc("buscar_paginas_documento", {
+    p_texto: texto,
+    p_embedding: embeddingPgvector,
+    p_limite: 10,
+  });
+  if (error || !data) return [];
+  const linhas = data as { documento_id: number; contratacao_id: number; pagina: number | null; trecho: string; score: number }[];
+  return linhas.map((row) => ({
+    documentoId: row.documento_id,
+    contratacaoId: row.contratacao_id,
+    pagina: row.pagina,
+    trecho: row.trecho,
+    score: row.score,
   }));
 }

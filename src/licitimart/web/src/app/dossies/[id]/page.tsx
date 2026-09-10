@@ -8,6 +8,7 @@ import { SeloCarimbo, SeloCompacto, type Tom } from "@/components/Selo";
 import VeredictoBotoes from "./VeredictoBotoes";
 import EnriquecerBotao from "./EnriquecerBotao";
 import DetectarRestritividadeBotao from "./DetectarRestritividadeBotao";
+import ResultadoDisputaSelect from "./ResultadoDisputaSelect";
 
 const TOM_CONFIABILIDADE: Record<string, Tom> = {
   confirmado: "green",
@@ -78,6 +79,17 @@ export default async function DossieDetalhePage({
                 contratacaoId={Number(dossie.id.replace("real-", ""))}
                 vereditoAtual={dossie.veredito}
               />
+              {dossie.veredito === "go" && (
+                <div className="mt-3">
+                  <div className="text-[11px] text-ink-faint">Resultado da disputa</div>
+                  <div className="mt-1">
+                    <ResultadoDisputaSelect
+                      contratacaoId={Number(dossie.id.replace("real-", ""))}
+                      resultadoAtual={dossie.resultado ?? "aguardando"}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="mt-1 font-display text-xl font-semibold text-ink">{ROTULO_VEREDITO[dossie.veredito]}</div>

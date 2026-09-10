@@ -59,6 +59,23 @@ async function extrairTextoDocx(conteudo: Buffer): Promise<ResultadoExtracao> {
   }
 }
 
+// Fase S: fatia texto_extraido em paginas usando os offsets (mesma
+// logica de scripts/gerar_embeddings_paginas.py, os dois precisam
+// concordar sobre onde cada pagina comeca/termina). DOCX (sem offsets)
+// vira um chunk unico.
+export function fatiarPorPagina(texto: string, offsets: number[]): { pagina: number | null; texto: string }[] {
+  if (offsets.length === 0) {
+    return texto.trim() ? [{ pagina: null, texto }] : [];
+  }
+  const paginas: { pagina: number | null; texto: string }[] = [];
+  offsets.forEach((inicio, i) => {
+    const fim = i + 1 < offsets.length ? offsets[i + 1] - 1 : texto.length;
+    const trecho = texto.slice(inicio, fim).trim();
+    if (trecho) paginas.push({ pagina: i + 1, texto: trecho });
+  });
+  return paginas;
+}
+
 // Despacha pelo conteudo real (magic bytes), nao pelo nome do arquivo --
 // mesmo achado da Fase K: o "titulo" do PNCP nem sempre tem extensao.
 export async function extrairTexto(conteudo: ArrayBuffer): Promise<ResultadoExtracao> {
