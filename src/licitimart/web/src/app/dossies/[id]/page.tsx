@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buscarDossie, ROTULO_CONFIABILIDADE, ROTULO_ORIGEM, ROTULO_VEREDITO } from "@/lib/mock/dossies";
+import { buscarItensComparaveis } from "@/lib/data/dossiesSupabase";
+import { calcularFaixaPreco } from "@/lib/precificacao";
 import VeredictoBotoes from "./VeredictoBotoes";
 
 export default async function DossieDetalhePage({
@@ -11,6 +13,8 @@ export default async function DossieDetalhePage({
   const { id } = await params;
   const dossie = await buscarDossie(id);
   if (!dossie) notFound();
+
+  const itensComparaveis = await buscarItensComparaveis(dossie.itens.map((i) => i.descricao));
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
@@ -59,8 +63,16 @@ export default async function DossieDetalhePage({
       <h2 className="mt-8 text-lg font-semibold">Itens</h2>
       {dossie.itens.length === 0 && (
         <p className="mt-2 text-sm italic text-neutral-500">
-          Relação de itens ainda não extraída do documento (só o metadado de publicação foi
-          coletado até aqui — ver `src/licitimart/itens/`, ainda não construído).
+          {dossie.origem === "pncp_real"
+            ? "Itens ainda não coletados para esta contratação (backfill parcial, ver scripts/backfill_itens.py — nem todas as contratações já foram processadas)."
+            : "Relação de itens ainda não extraída do documento (só o metadado de publicação foi coletado até aqui — ver `src/licitimart/itens/`, ainda não construído)."}
+        </p>
+      )}
+      {dossie.itens.length > 0 && (
+        <p className="mt-1 text-xs text-neutral-400">
+          RF-008 — faixa de preço por correspondência exata de descrição entre editais (não é busca
+          semântica, ver RF-005 não construído ainda); com poucas amostras, mostra &quot;dado
+          insuficiente&quot; em vez de inventar uma faixa (RF-020).
         </p>
       )}
       <table className="mt-3 w-full text-left text-sm">
@@ -69,18 +81,35 @@ export default async function DossieDetalhePage({
             <th className="py-2 font-medium">Descrição</th>
             <th className="py-2 font-medium">Qtd.</th>
             <th className="py-2 font-medium">Valor unitário estimado</th>
+            <th className="py-2 font-medium">Faixa de preço (RF-008)</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100">
-          {dossie.itens.map((item, i) => (
-            <tr key={i}>
-              <td className="py-2">{item.descricao}</td>
-              <td className="py-2">{item.quantidade}</td>
-              <td className="py-2">
-                {item.valorUnitarioEstimado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-              </td>
-            </tr>
-          ))}
+          {dossie.itens.map((item, i) => {
+            const faixa = calcularFaixaPreco(itensComparaveis, item.descricao);
+            return (
+              <tr key={i}>
+                <td className="py-2">{item.descricao}</td>
+                <td className="py-2">{item.quantidade}</td>
+                <td className="py-2">
+                  {item.valorUnitarioEstimado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </td>
+                <td className="py-2 text-xs">
+                  {faixa.status === "insuficiente" ? (
+                    <span className="italic text-neutral-400">
+                      Dado insuficiente ({faixa.amostras} amostra{faixa.amostras === 1 ? "" : "s"})
+                    </span>
+                  ) : (
+                    <span className="text-neutral-600">
+                      {faixa.minimo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} –{" "}
+                      {faixa.maximo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      <span className="text-neutral-400"> (mediana {faixa.mediana.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}, n={faixa.amostras})</span>
+                    </span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 

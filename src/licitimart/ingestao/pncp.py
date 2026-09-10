@@ -12,6 +12,7 @@ de arquitetura que vieram direto da experiencia dos spikes, nao de suposicao:
    dentro do mesmo processo.
 """
 import logging
+import re
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -24,7 +25,25 @@ from .throttle import ThrottleComDescoberta
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://pncp.gov.br/api/consulta/v1"
+# Base diferente da consulta de publicacao acima -- confirmado ao vivo
+# (Fase I, 10/09/2026): /api/consulta/v1/orgaos/.../itens responde 404,
+# so /api/pncp/v1/orgaos/.../itens funciona.
+BASE_URL_ITENS = "https://pncp.gov.br/api/pncp/v1"
 FONTE = "pncp"
+
+_REGEX_NUMERO_CONTROLE = re.compile(r"^(\d{14})-\d+-(\d+)/(\d{4})$")
+
+
+def _parsear_numero_controle(numero_controle_pncp: str) -> tuple[str, int, int]:
+    """numero_controle_pncp vem no formato "{cnpj:14}-{1}-{sequencial}/{ano}"
+    (confirmado nos 248 registros reais coletados na Fase C/D). Levanta
+    ValueError com mensagem clara se o formato nao bater -- nunca chuta um
+    parse parcial que pareca ter funcionado."""
+    m = _REGEX_NUMERO_CONTROLE.match(numero_controle_pncp)
+    if not m:
+        raise ValueError(f"numero_controle_pncp fora do formato esperado: {numero_controle_pncp!r}")
+    cnpj, sequencial, ano = m.groups()
+    return cnpj, int(sequencial), int(ano)
 TAMANHO_PAGINA = 50
 MAX_PAGINAS_POR_MODALIDADE = 200
 MAX_TENTATIVAS_POR_PAGINA = 6
@@ -103,6 +122,39 @@ class ColetorPublicacaoPNCP:
             # erro_taxa / erro_rede -> tenta de novo (throttle ja reagiu)
         motivo = "erro_taxa" if self._throttle.erros_taxa_vistos else "erro_rede"
         return ("abandonada", motivo)
+
+    def buscar_itens(self, numero_controle_pncp: str) -> list[dict] | None:
+        """Itens (RF-008) de uma contratacao ja coletada. Retorna None em
+        erro/instabilidade (nunca lista vazia com sentido ambiguo) -- quem
+        chama decide se tenta de novo depois. Usa o MESMO throttle da
+        coleta de publicacao (e a mesma infraestrutura PNCP, o limite
+        empirico descoberto vale para as duas)."""
+        cnpj, sequencial, ano = _parsear_numero_controle(numero_controle_pncp)
+        self._throttle.aguardar_vez()
+        url = f"{BASE_URL_ITENS}/orgaos/{cnpj}/compras/{ano}/{sequencial}/itens"
+        try:
+            resp = self._cliente.get(url)
+        except httpx.RequestError as exc:
+            self._throttle.registrar_erro_rede()
+            logger.info("erro de rede buscando itens de %s: %s", numero_controle_pncp, exc)
+            return None
+
+        if resp.status_code == 200:
+            self._throttle.registrar_sucesso()
+            corpo = resp.json()
+            return corpo if isinstance(corpo, list) else []
+        elif resp.status_code == 404:
+            # Contratacao sem item cadastrado no PNCP -- nao e erro, e
+            # estado real de alguns registros (ex.: leilao de bem unico).
+            self._throttle.registrar_sucesso()
+            return []
+        elif resp.status_code in (429, 503):
+            self._throttle.registrar_erro_taxa()
+            return None
+        else:
+            logger.warning("status inesperado %s buscando itens de %s: %s",
+                            resp.status_code, numero_controle_pncp, resp.text[:200])
+            return None
 
     def coletar_dia(self, data_inicial: str, data_final: str, orcamento_segundos: float | None = None) -> Iterator[dict]:
         """Gera itens (dict cru da API) de todas as modalidades para a

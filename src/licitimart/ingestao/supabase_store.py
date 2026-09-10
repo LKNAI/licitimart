@@ -131,6 +131,24 @@ def upsert_contratacoes(cliente: Client, itens_pncp: list[dict]) -> int:
     return len(linhas)
 
 
+def upsert_itens_licitacao(cliente: Client, contratacao_id: int, itens_pncp: list[dict]) -> int:
+    """Itens (RF-008) nao entram no rastreamento de retificacao desta fase
+    (so contratacoes tem historico, ver Fase H) -- delete-then-insert por
+    contratacao_id substitui o estado em vez de versionar. Mais simples, e
+    item raramente muda sozinho sem o resto do edital mudar junto."""
+    cliente.table("itens_licitacao").delete().eq("contratacao_id", contratacao_id).execute()
+    if not itens_pncp:
+        return 0
+    linhas = [{
+        "contratacao_id": contratacao_id,
+        "descricao": item.get("descricao") or "(sem descrição)",
+        "quantidade": item.get("quantidade"),
+        "valor_unitario_estimado": item.get("valorUnitarioEstimado"),
+    } for item in itens_pncp]
+    cliente.table("itens_licitacao").insert(linhas).execute()
+    return len(linhas)
+
+
 def registrar_manifesto(cliente: Client, fonte: str, consulta: dict, contagem: int) -> None:
     """RNF-013 -- procedencia de cada lote de coleta. sha256 calculado
     sobre a propria consulta+contagem (nao sobre o payload bruto completo,

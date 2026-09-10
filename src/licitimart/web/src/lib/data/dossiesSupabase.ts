@@ -3,7 +3,7 @@
 // (dossiesReais.ts / scripts/exportar_para_webapp.py), que fica mantido
 // como fallback historico mas nao e mais lido por /dossies.
 import { criarClienteSupabaseServer } from "@/lib/supabase/server";
-import type { Dossie } from "@/lib/mock/dossies";
+import type { Dossie, ItemLicitacao } from "@/lib/mock/dossies";
 
 export interface MetadadoContratacoes {
   disponivel: boolean;
@@ -48,6 +48,23 @@ export async function carregarDossiesSupabase(): Promise<{ dossies: Dossie[]; me
     }
   }
 
+  // Itens reais (RF-008/backfill parcial via scripts/backfill_itens.py --
+  // ainda nao cobre as 100% das contratacoes, so quem ja foi processado).
+  const { data: itensRows } = await supabase
+    .from("itens_licitacao")
+    .select("contratacao_id, descricao, quantidade, valor_unitario_estimado")
+    .in("contratacao_id", data.map((row) => row.id));
+  const itensPorContratacao = new Map<number, ItemLicitacao[]>();
+  for (const item of itensRows ?? []) {
+    const lista = itensPorContratacao.get(item.contratacao_id) ?? [];
+    lista.push({
+      descricao: item.descricao,
+      quantidade: item.quantidade ?? 0,
+      valorUnitarioEstimado: item.valor_unitario_estimado ?? 0,
+    });
+    itensPorContratacao.set(item.contratacao_id, lista);
+  }
+
   const dossies: Dossie[] = data.map((row) => ({
     id: `real-${row.id}`,
     numeroControlePNCP: row.numero_controle_pncp,
@@ -58,10 +75,27 @@ export async function carregarDossiesSupabase(): Promise<{ dossies: Dossie[]; me
     dataPublicacao: row.data_publicacao ?? new Date().toISOString(),
     veredito: veredictosPorContratacao.get(row.id) ?? "revisao_humana",
     confiabilidade: (row.confiabilidade as Dossie["confiabilidade"]) ?? "fonte_unica",
-    itens: [],
+    itens: itensPorContratacao.get(row.id) ?? [],
     achados: [],
     origem: "pncp_real",
   }));
 
   return { dossies, metadado: { disponivel: true, total: count ?? dossies.length } };
+}
+
+// RF-008 -- itens de QUALQUER contratação real com a mesma descrição
+// exata, para servir de amostra ao cálculo de faixa de preço
+// (src/lib/precificacao.ts). Dado público, sem escopo de tenant --
+// preço homologado de edital é fato do mercado, não segredo de negócio.
+export async function buscarItensComparaveis(descricoes: string[]): Promise<{ descricao: string; valorUnitarioEstimado: number }[]> {
+  if (descricoes.length === 0) return [];
+  const supabase = await criarClienteSupabaseServer();
+  const { data } = await supabase
+    .from("itens_licitacao")
+    .select("descricao, valor_unitario_estimado")
+    .in("descricao", descricoes);
+  return (data ?? []).map((row) => ({
+    descricao: row.descricao,
+    valorUnitarioEstimado: row.valor_unitario_estimado ?? 0,
+  }));
 }
