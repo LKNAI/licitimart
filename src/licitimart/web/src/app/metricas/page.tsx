@@ -1,5 +1,5 @@
 import { listarTodosDossies, ROTULO_VEREDITO, Veredito } from "@/lib/mock/dossies";
-import { carregarDossiesReais } from "@/lib/data/dossiesReais";
+import { carregarDossiesSupabase } from "@/lib/data/dossiesSupabase";
 
 function formatarMoeda(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -7,7 +7,7 @@ function formatarMoeda(v: number) {
 
 export default async function MetricasPage() {
   const todos = await listarTodosDossies();
-  const { metadado } = await carregarDossiesReais();
+  const { metadado } = await carregarDossiesSupabase();
 
   const reais = todos.filter((d) => d.origem === "pncp_real");
   const mock = todos.filter((d) => d.origem === "mock_ilustrativo");
@@ -76,16 +76,13 @@ export default async function MetricasPage() {
       <h2 className="mt-8 text-lg font-semibold">Procedência do dado real</h2>
       {metadado.disponivel ? (
         <ul className="mt-2 space-y-1 text-sm text-neutral-600">
-          <li>Coletado em: {new Date(metadado.coletadoEm!).toLocaleString("pt-BR")}</li>
-          <li>
-            Janela: {metadado.janela!.dataInicial} a {metadado.janela!.dataFinal}
-          </li>
-          <li>Pendências não resolvidas na fila: {metadado.pendenciasNaoResolvidas}</li>
-          <li>Maior valor estimado no lote: {formatarMoeda(maiorValor)}</li>
+          <li>Fonte: consulta ao vivo à tabela <code>contratacoes</code> no Supabase (RLS, usuário autenticado)</li>
+          <li>Total de linhas na tabela: {metadado.total}</li>
+          <li>Maior valor estimado no lote carregado: {formatarMoeda(maiorValor)}</li>
         </ul>
       ) : (
         <p className="mt-2 text-sm italic text-neutral-500">
-          Nenhum snapshot real carregado — rode <code>python scripts/exportar_para_webapp.py</code>.
+          Não foi possível consultar o Supabase agora.
         </p>
       )}
     </div>

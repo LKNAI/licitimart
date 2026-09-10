@@ -4,7 +4,7 @@
 // primeira classe, ERS secao 4.1), RF-019 (Selo de Confiabilidade) e
 // RF-020 (estados nao-conclusivos exibidos explicitamente, nunca
 // escondidos atras de um score bonito).
-import { carregarDossiesReais } from "@/lib/data/dossiesReais";
+import { carregarDossiesSupabase } from "@/lib/data/dossiesSupabase";
 
 export type Veredito = "go" | "no_go" | "revisao_humana";
 export type Confiabilidade = "confirmado" | "fonte_unica" | "divergente";
@@ -131,7 +131,7 @@ export const DOSSIES_MOCK: Dossie[] = [
 // de disco em runtime (ver dossiesReais.ts) -- não existe import estático
 // de dado que pode não ter sido gerado ainda.
 export async function listarTodosDossies(): Promise<Dossie[]> {
-  const { dossies } = await carregarDossiesReais();
+  const { dossies } = await carregarDossiesSupabase();
   return [...dossies, ...DOSSIES_MOCK];
 }
 

@@ -5,7 +5,7 @@ import {
   ROTULO_ORIGEM,
   ROTULO_VEREDITO,
 } from "@/lib/mock/dossies";
-import { carregarDossiesReais } from "@/lib/data/dossiesReais";
+import { carregarDossiesSupabase } from "@/lib/data/dossiesSupabase";
 
 const CORES_VEREDITO: Record<string, string> = {
   go: "bg-emerald-100 text-emerald-800",
@@ -35,7 +35,7 @@ export default async function DossiesPage({
   const pagina = Math.max(1, Number(paginaParam ?? "1") || 1);
 
   const todos = await listarTodosDossies();
-  const { metadado } = await carregarDossiesReais();
+  const { metadado } = await carregarDossiesSupabase();
   const totalPaginas = Math.max(1, Math.ceil(todos.length / POR_PAGINA));
   const inicio = (pagina - 1) * POR_PAGINA;
   const visiveis = todos.slice(inicio, inicio + POR_PAGINA);
@@ -47,12 +47,11 @@ export default async function DossiesPage({
         RF-006 — {todos.length} dossiê(s):{" "}
         {metadado.disponivel ? (
           <>
-            {ROTULO_ORIGEM.pncp_real} vêm do coletor real do PNCP ({metadado.totalItens} itens,
-            coletados em {new Date(metadado.coletadoEm!).toLocaleString("pt-BR")}, janela{" "}
-            {metadado.janela!.dataInicial});{" "}
+            {ROTULO_ORIGEM.pncp_real} vêm direto da tabela <code>contratacoes</code> no Supabase
+            ({metadado.total} linhas — consulta ao vivo, não mais snapshot JSON);{" "}
           </>
         ) : (
-          <>Nenhum snapshot real ainda — rode <code>python scripts/exportar_para_webapp.py</code>. </>
+          <>Não foi possível consultar o Supabase agora (ver <code>src/lib/data/dossiesSupabase.ts</code>). </>
         )}
         {ROTULO_ORIGEM.mock_ilustrativo} são exemplos de como a tela fica quando existir análise
         de IA (ainda sem chave de LLM configurada). Nenhum item real tem veredito além de

@@ -1,34 +1,29 @@
-# Licitimart — web (esqueleto v1)
+# Licitimart — web (v1, autenticação real)
 
-Next.js 15 (App Router, TypeScript, Tailwind). Ver `plan.md` para o que foi decidido e por quê.
+Next.js 15 (App Router, TypeScript, Tailwind). Ver `plan.md` (esqueleto/Fase A/B/C) e `plan_fase_d.md` (autenticação) para o que foi decidido e por quê.
 
 ## Como rodar
 
 ```bash
 npm install
-cp .env.example .env.local   # preencher com um projeto Supabase real quando existir
+cp .env.example .env.local   # preencher com o projeto Supabase real (SUPABASE_URL -> NEXT_PUBLIC_SUPABASE_URL, anon key)
 npm run dev
 ```
 
-## O que é real vs. mock, hoje
+Login obrigatório (middleware protege todas as rotas exceto `/login`) — crie uma conta em `/login` (e-mail/senha) e depois uma empresa em `/onboarding` (aparece automaticamente se você ainda não tiver tenant).
 
-- **Real:** estrutura de rotas (`/`, `/dossies`, `/dossies/[id]`, `/pipeline`), tipagem (`src/lib/mock/dossies.ts`), clientes Supabase (`src/lib/supabase/`) — já exigem env var real, sem fallback silencioso. **913 dos dossiês em `/dossies` são dado real do PNCP** (`src/lib/data/contratacoes_pncp.json`, gerado por `scripts/exportar_para_webapp.py` — ver `plan.md`, "Fase A"), sempre com veredito "Revisão Humana" porque nenhuma análise foi feita sobre eles ainda.
-- **Mock:** só os 3 dossiês ilustrativos (`DOSSIES_MOCK`) — existem para mostrar como a tela fica quando há análise de IA (Go/No-Go, achados, citação). Toda linha/tela mostra o rótulo de origem (`ROTULO_ORIGEM`) — real e mock nunca se misturam sem essa distinção visível.
+## O que é real vs. mock/exemplo, hoje
 
-## Para atualizar o dado real
-
-```bash
-cd ../../..   # raiz do projeto
-python scripts/exportar_para_webapp.py
-```
-
-Reescreve `src/lib/data/contratacoes_pncp.json`. Respeita o throttle de descoberta empírica e a fila de pendências do `src/licitimart/ingestao/` — não rode em loop nem baixe o orçamento sem necessidade.
+- **Real, com Supabase por trás:** autenticação (e-mail/senha), sessão (`src/middleware.ts`), criação de tenant (RPC `criar_tenant_e_associar`), `/dossies` e `/metricas` (consulta ao vivo à tabela `contratacoes`, sob RLS). Isolamento entre tenants testado com usuários reais — ver `plan_fase_d.md`.
+- **Real, mas ainda por ponte JSON (não Supabase):** nenhuma tela hoje — a Fase D já religou as duas telas mais importantes.
+- **Exemplo real, não fabricado à mão:** `/impugnacoes` (minutas geradas pelo motor determinístico do spike 03).
+- **Mock/exemplo estático:** os 3 dossiês ilustrativos em `/dossies` (`DOSSIES_MOCK`), `/retificacoes` (diff real, par de texto de exemplo), `/tenant` (formulário sem persistência — RF-004 completo ainda não construído).
 
 ## O que falta (não é bug, é próximo passo)
 
-- Projeto Supabase real (`.env.local` vazio hoje) — bloqueia persistência de verdade em `/tenant` e autenticação.
-- Autenticação (RNF-007 RBAC) — nenhuma tela pede login ainda.
-- ~~Conectar `/dossies` ao dado real de `src/licitimart/ingestao/`~~ — feito (Fase A, `scripts/exportar_para_webapp.py`). Falta automatizar a cadência (hoje é manual) e ampliar o escopo coletado.
-- Navegação "abrir na página exata" (RNF-010) — hoje é um botão mock; depende do spike 02 ter uma citação validada por LLM real para apontar.
-- ~~Impugnação Assistida (RF-017) na UI~~ — feito como exemplo real (`/impugnacoes`, Fase B, `scripts/exportar_minutas_exemplo.py`). Falta aplicar sobre edital real (depende de extração de texto + análise, ainda não construídas).
-- Diff de Retificação (RF-018) sobre dado real — hoje `/retificacoes` é só exemplo estático; precisa do coletor rastrear duas versões da mesma contratação ao longo do tempo (trabalho de v2 do spike 01).
+- Magic Link/OAuth (hoje só e-mail/senha — decisão deliberada, ver `plan_fase_d.md`).
+- RBAC fino por papel (`analista`/`gestor_comercial`/`juridico_compliance`/`admin_tenant`) — hoje qualquer membro do tenant vê tudo do próprio tenant.
+- Recuperação de senha, gestão de membros do tenant.
+- Navegação "abrir na página exata" (RNF-010) — depende do spike 02 ter citação validada por LLM real.
+- Diff de Retificação sobre dado real — depende do coletor rastrear duas versões da mesma contratação ao longo do tempo (v2 do spike 01).
+- RF-004 (Cadastro de Tenant) persistir de verdade em `tenant_catalogo_itens` — hoje `/tenant` é só formulário.
