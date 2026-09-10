@@ -1,80 +1,77 @@
-"use client";
+import { criarClienteSupabaseServer } from "@/lib/supabase/server";
+import ItemCatalogoForm from "./ItemCatalogoForm";
+import RemoverItemBotao from "./RemoverItemBotao";
 
-import { useState } from "react";
+export default async function TenantPage() {
+  const supabase = await criarClienteSupabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-export default function TenantPage() {
-  const [catalogo, setCatalogo] = useState("");
-  const [cnaes, setCnaes] = useState("");
-  const [salvo, setSalvo] = useState(false);
+  if (!user) return null; // middleware já bloqueia isto antes de chegar aqui
+
+  const { data: minhaMembresia } = await supabase
+    .from("tenant_membros")
+    .select("tenant_id")
+    .eq("user_id", user.id)
+    .limit(1)
+    .single();
+
+  if (!minhaMembresia) return null; // middleware manda pra /onboarding
+
+  const tenantId = minhaMembresia.tenant_id as number;
+
+  const { data: itens, error } = await supabase
+    .from("tenant_catalogo_itens")
+    .select("id, descricao, cnae")
+    .eq("tenant_id", tenantId)
+    .order("criado_em", { ascending: true });
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
       <h1 className="text-2xl font-semibold tracking-tight">Perfil do Tenant</h1>
       <p className="mt-1 text-sm text-neutral-500">
-        RF-004 — cadastro de catálogo, CNAEs/NCMs, atestados e certidões ativas.
+        RF-004 — cadastro de catálogo e CNAEs de interesse, persistido no Supabase real.
       </p>
 
-      <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        Este formulário <strong>não persiste nada</strong> — não há projeto Supabase configurado
-        neste ambiente. É só a estrutura de tela (RNF-005 isolamento multi-tenant depende do
-        banco real existir).
+      {error && <p className="mt-4 text-sm text-red-600">{error.message}</p>}
+
+      <table className="mt-6 w-full text-sm">
+        <thead>
+          <tr className="border-b border-neutral-200 text-left text-neutral-500">
+            <th className="py-2">Descrição</th>
+            <th className="py-2">CNAE</th>
+          </tr>
+        </thead>
+        <tbody>
+          {itens?.length ? (
+            itens.map((item) => (
+              <tr key={item.id} className="border-b border-neutral-100">
+                <td className="py-2">{item.descricao}</td>
+                <td className="py-2 text-neutral-500">
+                  <div className="flex items-center justify-between gap-2">
+                    <span>{item.cnae ?? "—"}</span>
+                    <RemoverItemBotao itemId={item.id} />
+                  </div>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={2} className="py-3 text-neutral-400">
+                Nenhum item de catálogo cadastrado ainda.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      <ItemCatalogoForm tenantId={tenantId} />
+
+      <div className="mt-8 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-500">
+        <strong>Atestados de capacidade técnica (upload):</strong> ainda não disponível — exige
+        Supabase Storage, que não foi decidido/configurado ainda para este projeto.
       </div>
-
-      <form
-        className="mt-6 space-y-5"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setSalvo(true);
-        }}
-      >
-        <div>
-          <label className="block text-sm font-medium text-neutral-700">
-            Catálogo de produtos/serviços
-          </label>
-          <textarea
-            value={catalogo}
-            onChange={(e) => setCatalogo(e.target.value)}
-            rows={4}
-            placeholder="Um item por linha — ex.: aparelho de ultrassom portátil"
-            className="mt-1 w-full rounded-md border border-neutral-300 p-2 text-sm"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-neutral-700">CNAEs de interesse</label>
-          <input
-            value={cnaes}
-            onChange={(e) => setCnaes(e.target.value)}
-            placeholder="Separados por vírgula — ex.: 4645-1/02, 3250-7/01"
-            className="mt-1 w-full rounded-md border border-neutral-300 p-2 text-sm"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-neutral-700">
-            Atestados de capacidade técnica (upload)
-          </label>
-          <input
-            type="file"
-            disabled
-            className="mt-1 block text-sm text-neutral-400"
-            title="Upload exige Supabase Storage real, não configurado ainda"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
-        >
-          Salvar (não persiste)
-        </button>
-
-        {salvo && (
-          <p className="text-sm text-emerald-700">
-            Formulário &quot;enviado&quot; — nada foi salvo em lugar nenhum. Isto é intencional.
-          </p>
-        )}
-      </form>
     </div>
   );
 }
