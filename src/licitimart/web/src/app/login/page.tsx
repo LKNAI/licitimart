@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { entrar, cadastrar } from "./actions";
 
 const estadoInicial = { erro: "" };
@@ -34,6 +35,9 @@ export default function LoginPage() {
         >
           {pendenteEntrar ? "Entrando…" : "Entrar"}
         </button>
+        <Link href="/recuperar-senha" className="block text-center text-xs text-neutral-500 hover:text-neutral-900">
+          Esqueci minha senha
+        </Link>
       </form>
 
       <form action={acaoCadastrar} className="mt-4 space-y-3 rounded-lg border border-dashed border-neutral-300 bg-neutral-50 p-5">

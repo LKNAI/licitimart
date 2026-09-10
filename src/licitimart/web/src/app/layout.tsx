@@ -57,10 +57,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 <Link href="/tenant" className="hover:text-neutral-900">
                   Tenant
                 </Link>
+                <Link href="/tenant/membros" className="hover:text-neutral-900">
+                  Membros
+                </Link>
               </nav>
             )}
             <span className="ml-auto rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
-              Fase D — auth real
+              Fase E — RBAC + recuperação de senha
             </span>
             {user && (
               <form action={sair}>

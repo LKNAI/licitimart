@@ -4,7 +4,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const ROTAS_PUBLICAS = ["/login", "/auth"];
+const ROTAS_PUBLICAS = ["/login", "/auth", "/recuperar-senha"];
 const ROTA_ONBOARDING = "/onboarding";
 
 export async function middleware(request: NextRequest) {
